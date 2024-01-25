@@ -78,8 +78,8 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
   }
 
   /*
-    syst_->total_bnb_data_pot_;
-    
+    ToDo: Add this to output
+    syst_->total_bnb_data_pot_;    
   */
 
   std::cout << "\n\nUnfolding -----------------" << std::endl;
