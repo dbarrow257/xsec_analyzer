@@ -540,7 +540,7 @@ void UniverseMaker::prepare_formulas() {
     std::string category_formula_name = "category_formula_" + str_category;
 
     //DB - Problematic
-    std::string category_cuts = "CC1muNp0pi_EventCategory == " + str_category;
+    std::string category_cuts = "CC1mu2p0pi_EventCategory == " + str_category;
 
     auto cbf = std::make_unique< TTreeFormula >(
       category_formula_name.c_str(), category_cuts.c_str(), &input_chain_ );

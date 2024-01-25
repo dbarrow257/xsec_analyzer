@@ -170,6 +170,8 @@ class CrossSectionExtractor {
     const std::map< std::string, std::unique_ptr< PredictedTrueEvents > >&
       get_prediction_map() const { return pred_map_; }
 
+    SystematicsCalculator* get_syst_calc() { return syst_.get(); }
+
   protected:
 
     void prepare_predictions( const std::vector< std::string >& line_vec );
