@@ -1,10 +1,10 @@
 source setup_stv.sh
 
 PROCESSED_NTUPLE_DIR="/uboone/data/users/barrow/CC2P/"
-UNIV_OUTPUT_FILE=${PROCESSED_NTUPLE_DIR}"/Universes.root"
+UNIV_OUTPUT_FILE=${PROCESSED_NTUPLE_DIR}"/Universes_CC2P_DeltaPT.root"
 
 MEASUREMENT_OUTPUT_FILE="./Output/"
-UNF_MEAS_OUTPUT_FILE=${MEASUREMENT_OUTPUT_FILE}"/UnfoldedCrossSection.root"
+UNF_MEAS_OUTPUT_FILE=${MEASUREMENT_OUTPUT_FILE}"/UnfoldedCrossSection_CC2P_DeltaPT.root"
 
 PELEE_NTUPLE_CONFIG="./Configs/files_to_process.txt"
 FPM_CONFIG="./Configs/file_properties.txt"

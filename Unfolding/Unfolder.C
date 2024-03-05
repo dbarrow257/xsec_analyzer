@@ -30,24 +30,17 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
   std::cout << "\tOutputFileName: " << OutputFileName << std::endl;
   std::cout << "\n" << std::endl;
 
+  OutputFileName = OutputDirectory+"/"+OutputFileName;
+
   // Use a CrossSectionExtractor object to handle the systematics and unfolding
   auto extr = std::make_unique< CrossSectionExtractor >( XSEC_Config );
+
+  //Grab the systematics calculator from the extractor
+  auto syst_calc = extr->get_syst_calc();
 
   // Plot slices of the unfolded result                                                                                                                                                                             
   auto* sb_ptr = new SliceBinning( SLICE_Config );
   auto& sb = *sb_ptr; 
-
-  auto xsec = extr->get_unfolded_events();
-  double conv_factor = extr->conversion_factor();
-  const auto& pred_map = extr->get_prediction_map();
-
-  std::cout << "\n\nSaving results -----------------" << std::endl;
-  OutputFileName = OutputDirectory+"/"+OutputFileName;
-
-  std::cout << "Output file - " << OutputFileName << std::endl;
-  if (DumpToText) std::cout << "\tDumping plots to " << TextExtension << " files" << std::endl;
-  if (DumpToPlot) std::cout << "\tDumping plots to " << PlotExtension << " files" << std::endl;
-  std::cout << "\n" << std::endl;
 
   // Check that the output file can be written to
   TFile* File = new TFile(OutputFileName.c_str(), "RECREATE");
@@ -55,6 +48,52 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
     std::cerr << "Could not write to output file:" << OutputFileName << std::endl;
     throw;
   }
+
+  std::cout << "\n\nSaving inputs -----------------" << std::endl;
+  File->cd();
+  File->mkdir("Inputs");
+  File->cd("Inputs");
+
+  auto smearcept = syst_calc->get_cv_smearceptance_matrix();
+  smearcept->Write("smearcept");
+
+  auto true_signal = syst_calc->get_cv_true_signal();
+  true_signal->Write("true_signal");
+
+  auto meas = syst_calc->get_measured_events();
+  const auto& data_signal = meas.reco_signal_;
+  const auto& data_covmat = meas.cov_matrix_;
+
+  data_signal->Write("data_signal");
+  data_covmat->Write("data_covmat");
+
+  File->mkdir("Inputs/CovarianceMatrix");
+  File->cd("Inputs/CovarianceMatrix");
+  const auto covariances = syst_calc->get_covariances();
+  for ( const auto& matrix_pair : *covariances ) {
+    const std::string& matrix_key = matrix_pair.first;
+    auto temp_cov_mat = matrix_pair.second.get_matrix();
+    
+    temp_cov_mat->Write(matrix_key.c_str());
+  }
+
+  /*
+    ToDo: Add this to output
+    syst_->total_bnb_data_pot_;    
+  */
+
+  std::cout << "\n\nUnfolding -----------------" << std::endl;
+
+  auto xsec = extr->get_unfolded_events();
+  double conv_factor = extr->conversion_factor();
+  const auto& pred_map = extr->get_prediction_map();
+
+  std::cout << "\n\nSaving results -----------------" << std::endl;
+
+  std::cout << "Output file - " << OutputFileName << std::endl;
+  if (DumpToText) std::cout << "\tDumping plots to " << TextExtension << " files" << std::endl;
+  if (DumpToPlot) std::cout << "\tDumping plots to " << PlotExtension << " files" << std::endl;
+  std::cout << "\n" << std::endl;
 
   // Make results in both Event Count units and then the XSec units
   std::vector<std::string> ResultTypes(2);
@@ -67,15 +106,15 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 
     std::string RT = ResultTypes[iRT];
     File->cd();
-    File->mkdir(RT.c_str());
-    File->cd(RT.c_str());
+    File->mkdir((std::string("Outputs/")+RT).c_str());
+    File->cd((std::string("Outputs/")+RT).c_str());
 
     //======================================================================================
     //Loop over all covariance matrices stored in the unfolded result and save them
 
-    File->cd(RT.c_str());
-    File->mkdir((RT+"/Covariances").c_str());
-    File->cd((RT+"/Covariances").c_str());
+    File->cd((std::string("Outputs/")+RT).c_str());
+    File->mkdir((std::string("Outputs/")+RT+"/CovarianceMatrix").c_str());
+    File->cd((std::string("Outputs/")+RT+"/CovarianceMatrix").c_str());
 
     // Convert units on the covariance matrices one-by-one and dump them
     for ( const auto& cov_pair : xsec.unfolded_cov_matrix_map_ ) {
@@ -102,6 +141,10 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
     temp_err_prop_matrix.Write("ErrorPropagationMatrix");
     temp_add_smear_matrix.Write("AdditionalSmearingMatrix");
 
+    //DB - Need to figure out if these need to be converted - It's a thing which compares truth and reco
+    TMatrixD temp_response_matrix = *xsec.result_.response_matrix_;
+    temp_response_matrix.Write("ResponseMatrix");
+
     if (DumpToText) {
       dump_text_matrix( OutputDirectory+"/"+RT+"_mat_table_cov_unfolding"+TextExtension, temp_unfolding_matrix );
       dump_text_matrix( OutputDirectory+"/"+RT+"_mat_table_cov_err_prop"+TextExtension, temp_err_prop_matrix );
@@ -124,9 +167,9 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
       std::string SliceVariableName = SliceVar.name_;
       SliceVariableName.erase(std::remove(SliceVariableName.begin(), SliceVariableName.end(), ' '), SliceVariableName.end());
 
-      File->cd(RT.c_str());      
-      File->mkdir((RT+"/"+SliceVariableName).c_str());
-      File->cd((RT+"/"+SliceVariableName).c_str());
+      File->cd((std::string("Outputs/")+RT).c_str());      
+      File->mkdir((std::string("Outputs/")+RT+"/"+SliceVariableName).c_str());
+      File->cd((std::string("Outputs/")+RT+"/"+SliceVariableName).c_str());
 
       //====================================================================================== 
       //Save unfolded distribution for each covariance matrix
@@ -139,8 +182,11 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 
 	SliceHistogram* Slice_unf = SliceHistogram::make_slice_histogram( *xsec.result_.unfolded_signal_, Slice, uc_matrix.get() );
 	TH1* SliceHist = Slice_unf->hist_.get();
+	SliceHist->GetYaxis()->SetTitle("Events");
+
 	if (RT == "XsecUnits") {
 	  SliceHist->Scale(1.0 / conv_factor);
+	  SliceHist->GetYaxis()->SetTitle("Differential Cross Section [10^{-38} cm^{2}/Ar]");
 	}
 	SliceHist->Write((SliceVariableName+"_"+uc_name).c_str());
 

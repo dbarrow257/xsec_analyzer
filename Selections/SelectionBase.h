@@ -71,10 +71,11 @@ protected:
   bool Create;
 
   STV_Tools STVTools;
+
+  int nPassedEvents;
   
 private:
   std::string fSelectionName;
-  int nPassedEvents;
 
   std::vector<bool*> Pointer_Bool;
   std::vector<double*> Pointer_Double;

@@ -118,22 +118,22 @@ void CC1mu2p0pi::ComputeTrueObservables(AnalysisEvent* Event) {
   if (sig_two_protons_above_thresh_ && sig_one_muon_above_thres_ && sig_no_pions_) {
 
     double Muon_MCParticlePx = Event->mc_nu_daughter_px_->at(TrueMuonIndex);
-    double Muon_MCParticlePy = Event->mc_nu_daughter_px_->at(TrueMuonIndex);
-    double Muon_MCParticlePz = Event->mc_nu_daughter_px_->at(TrueMuonIndex);
+    double Muon_MCParticlePy = Event->mc_nu_daughter_py_->at(TrueMuonIndex);
+    double Muon_MCParticlePz = Event->mc_nu_daughter_pz_->at(TrueMuonIndex);
     TVector3 Muon_TVector3True(Muon_MCParticlePx,Muon_MCParticlePy,Muon_MCParticlePz);
     double Muon_TrueMomentum_GeV = Muon_TVector3True.Mag(); // GeV                                                                                                                                                    
     double Muon_TrueE_GeV = TMath::Sqrt( TMath::Power(Muon_TrueMomentum_GeV,2.) + TMath::Power(MUON_MASS,2.) ); // GeV
     
     double LeadingProton_MCParticlePx = Event->mc_nu_daughter_px_->at(TrueLeadingProtonIndex);
-    double LeadingProton_MCParticlePy = Event->mc_nu_daughter_px_->at(TrueLeadingProtonIndex);
-    double LeadingProton_MCParticlePz = Event->mc_nu_daughter_px_->at(TrueLeadingProtonIndex);
+    double LeadingProton_MCParticlePy = Event->mc_nu_daughter_py_->at(TrueLeadingProtonIndex);
+    double LeadingProton_MCParticlePz = Event->mc_nu_daughter_pz_->at(TrueLeadingProtonIndex);
     TVector3 LeadingProton_TVector3True(LeadingProton_MCParticlePx,LeadingProton_MCParticlePy,LeadingProton_MCParticlePz);
     double LeadingProton_TrueMomentum_GeV = LeadingProton_TVector3True.Mag(); // GeV
     double LeadingProton_TrueE_GeV = TMath::Sqrt( TMath::Power(LeadingProton_TrueMomentum_GeV,2.) + TMath::Power(PROTON_MASS,2.) ); // GeV
 
     double RecoilProton_MCParticlePx = Event->mc_nu_daughter_px_->at(TrueRecoilProtonIndex);
-    double RecoilProton_MCParticlePy = Event->mc_nu_daughter_px_->at(TrueRecoilProtonIndex);
-    double RecoilProton_MCParticlePz = Event->mc_nu_daughter_px_->at(TrueRecoilProtonIndex);
+    double RecoilProton_MCParticlePy = Event->mc_nu_daughter_py_->at(TrueRecoilProtonIndex);
+    double RecoilProton_MCParticlePz = Event->mc_nu_daughter_pz_->at(TrueRecoilProtonIndex);
     TVector3 RecoilProton_TVector3True(RecoilProton_MCParticlePx,RecoilProton_MCParticlePy,RecoilProton_MCParticlePz);
     double RecoilProton_TrueMomentum_GeV = RecoilProton_TVector3True.Mag(); // GeV
     double RecoilProton_TrueE_GeV = TMath::Sqrt( TMath::Power(RecoilProton_TrueMomentum_GeV,2.) + TMath::Power(PROTON_MASS,2.) ); // GeV
@@ -165,7 +165,11 @@ void CC1mu2p0pi::ComputeTrueObservables(AnalysisEvent* Event) {
     True_kMiss = STVTools.ReturnkMiss();
     True_PMiss = STVTools.ReturnPMiss();
     True_PMissMinus = STVTools.ReturnPMissMinus();
-    
+
+    if (IsEventSelected()) {
+      std::cout << "Event:" << nPassedEvents << " | MuonVector.X():" << Muon_TVector3True.X() << " | MuonVector.Y():" << Muon_TVector3True.Y() << " | MuonVector.Z():" << Muon_TVector3True.Z() << std::endl;
+      std::cout << "True_Pt:" << True_Pt << std::endl;
+    }
   }
 }
 
