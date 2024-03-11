@@ -72,7 +72,7 @@ protected:
 
   STV_Tools STVTools;
 
-  int nPassedEvents;
+  int eventNumber;
   
 private:
   std::string fSelectionName;
@@ -94,7 +94,7 @@ private:
   bool TrueFVSet = false;
   bool RecoFVSet = false;
 
-  int eventNumber;
+  int nPassedEvents;
 };
 
 #endif

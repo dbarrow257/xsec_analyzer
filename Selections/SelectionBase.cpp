@@ -27,8 +27,6 @@ void SelectionBase::ApplySelection(AnalysisEvent* Event) {
   Selected = Selection(Event);
   EvtCategory = CategorizeEvent(Event);
 
-  if (eventNumber>1000) throw;
-  
   ComputeRecoObservables(Event);
   if (Event->is_mc_) {   //Event->is_mc_ is set in CategorizeEvent
     ComputeTrueObservables(Event);

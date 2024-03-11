@@ -149,3 +149,12 @@ void write_pgfplots_file( const std::string& out_filename,
     out_file << '\n';
   }
 }
+
+//Divide the histogram contents by the bin width e.g. Xsec 10^{-38}/Ar -> Xsec 10^{-38}/Ar/Gev
+//Assumes bin width != 0.. seems reasonable.
+void divide_TH1_by_bin_width( TH1* Hist ) {
+  int nBins = Hist->GetNbinsX();
+  for (int xBin=1;xBin<=nBins;xBin++) {
+    Hist->SetBinContent(xBin,Hist->GetBinContent(xBin)/Hist->GetBinWidth(xBin));
+  }
+}

@@ -115,6 +115,7 @@ void CC1mu2p0pi::ComputeRecoObservables(AnalysisEvent* Event) {
 }
 
 void CC1mu2p0pi::ComputeTrueObservables(AnalysisEvent* Event) {
+
   if (sig_two_protons_above_thresh_ && sig_one_muon_above_thres_ && sig_no_pions_) {
 
     double Muon_MCParticlePx = Event->mc_nu_daughter_px_->at(TrueMuonIndex);
@@ -165,11 +166,6 @@ void CC1mu2p0pi::ComputeTrueObservables(AnalysisEvent* Event) {
     True_kMiss = STVTools.ReturnkMiss();
     True_PMiss = STVTools.ReturnPMiss();
     True_PMissMinus = STVTools.ReturnPMissMinus();
-
-    if (IsEventSelected()) {
-      std::cout << "Event:" << nPassedEvents << " | MuonVector.X():" << Muon_TVector3True.X() << " | MuonVector.Y():" << Muon_TVector3True.Y() << " | MuonVector.Z():" << Muon_TVector3True.Z() << std::endl;
-      std::cout << "True_Pt:" << True_Pt << std::endl;
-    }
   }
 }
 

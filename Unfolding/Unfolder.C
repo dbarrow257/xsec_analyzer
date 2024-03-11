@@ -12,6 +12,7 @@
 // STV analysis includes
 #include "CrossSectionExtractor.hh"
 #include "PGFPlotsDumpUtils.hh"
+#include "PlotUtils.hh"
 #include "SliceBinning.hh"
 #include "SliceHistogram.hh"
 
@@ -182,11 +183,14 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 
 	SliceHistogram* Slice_unf = SliceHistogram::make_slice_histogram( *xsec.result_.unfolded_signal_, Slice, uc_matrix.get() );
 	TH1* SliceHist = Slice_unf->hist_.get();
-	SliceHist->GetYaxis()->SetTitle("Events");
+
+	divide_TH1_by_bin_width(SliceHist);
+
+	SliceHist->GetYaxis()->SetTitle("Events/GeV");
 
 	if (RT == "XsecUnits") {
 	  SliceHist->Scale(1.0 / conv_factor);
-	  SliceHist->GetYaxis()->SetTitle("Differential Cross Section [10^{-38} cm^{2}/Ar]");
+	  SliceHist->GetYaxis()->SetTitle("Differential Cross Section [10^{-38} cm^{2}/Ar/GeV]");
 	}
 	SliceHist->Write((SliceVariableName+"_"+uc_name).c_str());
 
