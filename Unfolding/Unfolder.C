@@ -22,6 +22,8 @@ std::string TextExtension = ".txt";
 bool DumpToText = false;
 bool DumpToPlot = false;
 
+bool ApplyAdditionalSmearing = false;
+
 void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string OutputDirectory, std::string OutputFileName) {
 
   std::cout << "\nRunning Unfolder.C with options:" << std::endl;
@@ -88,6 +90,9 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
   auto xsec = extr->get_unfolded_events();
   double conv_factor = extr->conversion_factor();
   const auto& pred_map = extr->get_prediction_map();
+
+  //Grab the additional smearing matrix to apply to results:
+  TMatrixD Add_smear_matrix = *xsec.result_.add_smear_matrix_;
 
   std::cout << "\n\nSaving results -----------------" << std::endl;
 
@@ -184,8 +189,23 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 	SliceHistogram* Slice_unf = SliceHistogram::make_slice_histogram( *xsec.result_.unfolded_signal_, Slice, uc_matrix.get() );
 	TH1* SliceHist = Slice_unf->hist_.get();
 
-	divide_TH1_by_bin_width(SliceHist);
+	if (ApplyAdditionalSmearing) {
+	  //Convert TH1->TVector
+	  int nBins = SliceHist->GetNbinsX();
+	  TMatrixD SliceHist_TMat(nBins, 1);
+	  for (int xBin=1;xBin<=nBins;xBin++) {
+	    SliceHist_TMat(xBin-1,0) = SliceHist->GetBinContent(xBin);
+	  }
 
+	  //Apply Additional Smearing Matrix
+	  TMatrixD SmearSliceHist_TMat(Add_smear_matrix, TMatrixD::kMult, SliceHist_TMat);
+
+          for (int xBin=1;xBin<=nBins;xBin++) {
+            SliceHist->SetBinContent(xBin,SmearSliceHist_TMat(xBin-1,0));
+          }
+	}
+
+	divide_TH1_by_bin_width(SliceHist);
 	SliceHist->GetYaxis()->SetTitle("Events/GeV");
 
 	if (RT == "XsecUnits") {

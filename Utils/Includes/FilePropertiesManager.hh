@@ -107,12 +107,12 @@ class FilePropertiesManager {
 
     // Get a const reference to the singleton instance of the
     // FilePropertiesManager
-    inline static FilePropertiesManager& Instance() {
+  inline static FilePropertiesManager& Instance( const std::string& input_table_file_name = "" ) {
 
       // Create the FilePropertiesManager object using a static variable.
       // This ensures that the singleton instance is only created once.
       static std::unique_ptr<FilePropertiesManager>
-        the_instance( new FilePropertiesManager() );
+        the_instance( new FilePropertiesManager(input_table_file_name) );
 
       // Return a reference to the singleton instance
       return *the_instance;
@@ -269,8 +269,8 @@ class FilePropertiesManager {
 
   private:
 
-    inline FilePropertiesManager() {
-      this->load_file_properties();
+  inline FilePropertiesManager( const std::string& input_table_file_name = "" ) {
+      this->load_file_properties(input_table_file_name);
     }
 
     // Outer keys are run numbers, inner keys are ntuple file types, values are

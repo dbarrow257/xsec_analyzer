@@ -202,9 +202,9 @@ CrossSectionExtractor::CrossSectionExtractor(
   std::string syst_config_file_name;
   std::string univ_file_name;
   std::string file_properties_config;
-
   std::string unfolding_tech;
   std::string unfolding_opt;
+  std::string UnivTDirName = "";
 
   // Temporary storage for the configuration file lines defining each
   // prediction. We will revisit these once the systematic Universe objects
@@ -231,13 +231,16 @@ CrossSectionExtractor::CrossSectionExtractor(
       iss >> file_properties_config;
 
       // Reinitialize the FilePropertiesManager using the configuration file
-      auto& fpm = FilePropertiesManager::Instance();
-      fpm.load_file_properties( file_properties_config );
+      auto& fpm = FilePropertiesManager::Instance(file_properties_config);
     }
     else if ( first_word == "SystFile" ) {
       // Get the name of the non-default SystematicsCalculator
       // configuration file
       iss >> syst_config_file_name;
+    }
+    else if ( first_word == "UnivTDirName" ) {
+      // Read in the name of the TDirectory which holds the universes
+      iss >> UnivTDirName;
     }
     else if ( first_word == "UnivFile" ) {
       // Get the name of the ROOT file containing the pre-calculated
@@ -333,6 +336,7 @@ CrossSectionExtractor::CrossSectionExtractor(
   std::cout << "CrossSectionExtracter initialised with options:" << std::endl;
   std::cout << "\txsec_extract_tconfig_file_name: " << config_file_name << std::endl;
   std::cout << "\tsyst_config_file_name: " << syst_config_file_name << std::endl;
+  std::cout << "\t\tUnivTDirName: " << UnivTDirName << std::endl;
   std::cout << "\tfile_properties_config: " << file_properties_config << std::endl;
   std::cout << "\tunfolding_tech: " << unfolding_tech << std::endl;
   std::cout << "\t\tOption: " << unfolding_opt << std::endl;
@@ -356,7 +360,7 @@ CrossSectionExtractor::CrossSectionExtractor(
 
   // Initialize the owned SystematicsCalculator
   auto* temp_syst = new MCC9SystematicsCalculator( univ_file_name,
-    syst_config_file_name );
+						   syst_config_file_name, UnivTDirName );
   syst_.reset( temp_syst );
 
   // With the SystematicsCalculator in place (including its owned Universe
