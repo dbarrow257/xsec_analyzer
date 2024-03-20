@@ -475,7 +475,8 @@ double CrossSectionExtractor::conversion_factor() const {
   double total_pot = syst_->total_bnb_data_pot_;
   double integ_flux = integrated_numu_flux_in_FV( total_pot );
 
-  FiducialVolume FV = {21.5,234.85,-95.0,95.0,21.5,966.8};
+  //DB Troublesome hardcoded value
+  FiducialVolume FV = {10.,246.35,-106.5,106.5,10.,1026.8};
   double num_Ar = num_Ar_targets_in_FV(FV);
 
   double conv_factor = num_Ar * integ_flux / 1e38;

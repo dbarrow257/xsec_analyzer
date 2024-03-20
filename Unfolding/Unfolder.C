@@ -85,10 +85,13 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
     syst_->total_bnb_data_pot_;    
   */
 
+  std::cout << "Total POT:" << syst_calc->total_bnb_data_pot_ << std::endl;
+
   std::cout << "\n\nUnfolding -----------------" << std::endl;
 
   auto xsec = extr->get_unfolded_events();
   double conv_factor = extr->conversion_factor();
+  std::cout << "Conversion factor:" << 1.0/conv_factor << std::endl;
   const auto& pred_map = extr->get_prediction_map();
 
   //Grab the additional smearing matrix to apply to results:
@@ -205,7 +208,7 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
           }
 	}
 
-	divide_TH1_by_bin_width(SliceHist);
+	divide_TH1_by_bin_width(SliceHist,true);
 	SliceHist->GetYaxis()->SetTitle("Events/GeV");
 
 	if (RT == "XsecUnits") {
