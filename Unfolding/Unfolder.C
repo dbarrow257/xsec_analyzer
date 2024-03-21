@@ -16,13 +16,13 @@
 #include "SliceBinning.hh"
 #include "SliceHistogram.hh"
 
+#include "Functions.h"
+
 //Useful DEBUG options which can be turned on/off
 std::string PlotExtension = ".pdf";
 std::string TextExtension = ".txt";
 bool DumpToText = false;
 bool DumpToPlot = false;
-
-bool ApplyAdditionalSmearing = false;
 
 void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string OutputDirectory, std::string OutputFileName) {
 
@@ -95,7 +95,9 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
   const auto& pred_map = extr->get_prediction_map();
 
   //Grab the additional smearing matrix to apply to results:
-  TMatrixD Add_smear_matrix = *xsec.result_.add_smear_matrix_;
+  TMatrixD AC_matrix = *xsec.result_.add_smear_matrix_;
+  TH2D* AC_matrix_TH2 = new TH2D("ACMatrix","",AC_matrix.GetNrows(),0,AC_matrix.GetNrows(),AC_matrix.GetNrows(),0,AC_matrix.GetNrows());
+  TM2TH2(AC_matrix, AC_matrix_TH2);
 
   std::cout << "\n\nSaving results -----------------" << std::endl;
 
@@ -109,6 +111,12 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
   ResultTypes[0] = "EventCountUnits";
   ResultTypes[1] = "XsecUnits";
   size_t nResultTypes = ResultTypes.size();
+
+  // Make predictions in both AC smeared and truth distributions
+  std::vector<std::string> SmearTypes(2);
+  SmearTypes[0] = "Truth";
+  SmearTypes[1] = "ACSmeared";
+  size_t nSmearTypes = SmearTypes.size();
 
   //Loop over the two ResultTypes (Event Counts and Xsec Units)
   for (size_t iRT=0;iRT<nResultTypes;iRT++) {
@@ -192,22 +200,6 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 	SliceHistogram* Slice_unf = SliceHistogram::make_slice_histogram( *xsec.result_.unfolded_signal_, Slice, uc_matrix.get() );
 	TH1* SliceHist = Slice_unf->hist_.get();
 
-	if (ApplyAdditionalSmearing) {
-	  //Convert TH1->TVector
-	  int nBins = SliceHist->GetNbinsX();
-	  TMatrixD SliceHist_TMat(nBins, 1);
-	  for (int xBin=1;xBin<=nBins;xBin++) {
-	    SliceHist_TMat(xBin-1,0) = SliceHist->GetBinContent(xBin);
-	  }
-
-	  //Apply Additional Smearing Matrix
-	  TMatrixD SmearSliceHist_TMat(Add_smear_matrix, TMatrixD::kMult, SliceHist_TMat);
-
-          for (int xBin=1;xBin<=nBins;xBin++) {
-            SliceHist->SetBinContent(xBin,SmearSliceHist_TMat(xBin-1,0));
-          }
-	}
-
 	divide_TH1_by_bin_width(SliceHist,true);
 	SliceHist->GetYaxis()->SetTitle("Events/GeV");
 
@@ -221,27 +213,42 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 	if (DumpToPlot) draw_column_vector( OutputDirectory+"/"+RT+"_vec_table_unfolded_signal_"+uc_name+PlotExtension, *xsec.result_.unfolded_signal_, "Unfolded Signal", "Bin Number", "Cross Section [#times 10^{-38} cm^{2}]");
       }
 
-      //======================================================================================
-      //Loop over all generator predictions and save them to the same output
+    }
 
-      /*
-      //DB Still need to check this loop as I don't currently have generator prediction files for tutorial binning scheme
+    File->cd();
+    File->mkdir((std::string("Predictions/")+RT).c_str());
+    File->cd((std::string("Predictions/")+RT).c_str());
+    
+    //======================================================================================
+    //Loop over all generator predictions and save them to the same output
+    
+    for (int iST=0;iST<nSmearTypes;iST++) {
+      std::string ST = SmearTypes[iST];
+
+      File->cd();
+      File->mkdir((std::string("Predictions/")+RT+"/"+SmearTypes[iST]).c_str());
+      File->cd((std::string("Predictions/")+RT+"/"+SmearTypes[iST]).c_str());
+
       for ( const auto& gen_pair : extr->get_prediction_map()) {
 	std::string gen_short_name = gen_pair.second->name();
 	TMatrixD temp_gen = gen_pair.second->get_prediction();
 	if (RT == "XsecUnits") {
 	  temp_gen *= (1.0 / conv_factor);
 	}
+	
+	TH1D* temp_gen_hist = Matrix_To_TH1(temp_gen,gen_short_name,"","Events");
 
-	TH1D* temp_gen_hist = Matrix_To_TH1(temp_gen,gen_short_name,SliceVariableName,"Events");
-	temp_gen_hist->Write(("GenPred_"+SliceVariableName+"_"+gen_short_name).c_str());
+	if (ST == "ACSmeared") {
+	  temp_gen_hist = Multiply(temp_gen_hist,AC_matrix_TH2);
+	}
 
+	temp_gen_hist->Write(("Pred_"+gen_short_name+"_"+ST).c_str());
+	
 	if (DumpToText) dump_text_column_vector( OutputDirectory+"/"+RT+"_vec_table_" + gen_short_name + TextExtension, temp_gen );
 	if (DumpToPlot) draw_column_vector( OutputDirectory+"/"+RT+"_vec_table_" + gen_short_name + PlotExtension, temp_gen, (gen_short_name + " Prediction").c_str(), "Bin Number", "Cross Section [#times 10^{-38} cm^{2}]");
       }
-      */
-
     }
+
   }
 
   File->Close();

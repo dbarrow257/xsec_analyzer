@@ -8,6 +8,9 @@
 
 #include "TVector2.h"
 #include "TVector3.h"
+#include "TVectorD.h"
+#include "TH2D.h"
+#include "TMatrixD.h"
 
 // Helper function that avoids NaNs when taking square roots of negative
 // numbers
@@ -113,6 +116,131 @@ inline void compute_stvs( const TVector3& p3mu, const TVector3& p3p, double& del
   TVector2 yTUnit = ( -p3mu ).XYvector().Unit();
 
   delta_pTy = yTUnit.X()*delta_pT_vec.X() + yTUnit.Y()*delta_pT_vec.Y();
+}
+
+inline void TM2TH2(const TMatrixD Matrix, TH2D* Hist) {
+  int nBins = Matrix.GetNrows();
+  if (Hist->GetNbinsX() != nBins) {
+    std::cerr << "Matrix and given histogram have different binning" << std::endl;
+    throw;
+  }  
+
+  for (int xBin=0;xBin<nBins;xBin++) {
+    for (int yBin=0;yBin<nBins;yBin++) {
+      Hist->SetBinContent(xBin+1,yBin+1,(Matrix)(yBin,xBin));
+    }
+  }
+}
+
+inline void TV2TH(const TVectorD vec, TH1D* histo) {
+  // Fill vector to histogram,
+  for(Int_t i=0; i<vec.GetNrows(); i++)
+    {
+      histo->SetBinContent(i+1, vec(i));
+    }
+}
+
+inline void TH2TM(const TH2D* histo, TMatrixD& mat, bool rowcolumn) {
+  // Fill 2D histogram into matrix
+  // If TH2D(i, j) = Matrix(i, j), rowcolumn = kTRUE, else rowcolumn = kFALSE
+
+  for (Int_t i=0; i<histo->GetNbinsX(); i++) {
+
+    for (Int_t j=0; j<histo->GetNbinsY(); j++) {
+
+      if (rowcolumn) { mat(i, j) = histo->GetBinContent(i+1, j+1); }
+      else { mat(j, i) = histo->GetBinContent(i+1, j+1); }
+
+    }
+
+  }
+
+}
+
+inline void TH2TV(const TH1D* histo, TVectorD& vec)
+{
+  // Fill 1D histogram into matrix
+  for(Int_t i=0; i<histo->GetNbinsX(); i++)
+    {
+      vec(i) = histo->GetBinContent(i+1);
+    }
+}
+
+inline void CalcChiSquared(TH1D* h_model, TH1D* h_data, TH2D* cov, double &chi, int &ndof, double &pval, double &sigma) {
+
+  // Clone them so we can scale them 
+  TH1D* h_model_clone = (TH1D*)h_model->Clone();
+  TH1D* h_data_clone  = (TH1D*)h_data->Clone();
+  TH2D* h_cov_clone   = (TH2D*)cov->Clone();
+  int NBins = h_cov_clone->GetNbinsX();
+
+  // Getting covariance matrix in TMatrix form
+  TMatrixD cov_m;
+  cov_m.Clear();
+  cov_m.ResizeTo(NBins,NBins);
+
+  // loop over rows
+
+  for (int i = 0; i < NBins; i++) {
+
+    // loop over columns
+
+    for (int j = 0; j < NBins; j++) {
+
+      cov_m[i][j] = h_cov_clone->GetBinContent(i+1, j+1);
+ 
+    }
+    
+  }
+
+  TMatrixD copy_cov_m = cov_m;
+
+  // Inverting the covariance matrix
+  TMatrixD inverse_cov_m = cov_m.Invert();
+
+  // Calculating the chi2 = Summation_ij{ (x_i - mu_j)*E_ij^(-1)*(x_j - mu_j)  }
+  // x = data, mu = model, E^(-1) = inverted covariance matrix 
+  chi = 0.;
+  
+  for (int i = 0; i < NBins; i++) {
+    //double XWidth = h_data_clone->GetBinWidth(i+1);
+    for (int j = 0; j < NBins; j++) {
+      //double YWidth = h_data_clone->GetBinWidth(i+1);
+      double diffi = h_data_clone->GetBinContent(i+1) - h_model_clone->GetBinContent(i+1);
+      double diffj = h_data_clone->GetBinContent(j+1) - h_model_clone->GetBinContent(j+1);
+      double LocalChi = diffi * inverse_cov_m[i][j] * diffj; 
+      chi += LocalChi;
+    }
+
+  }
+
+  ndof = h_data_clone->GetNbinsX();
+  pval = TMath::Prob(chi, ndof);
+  sigma = TMath::Sqrt( TMath::ChisquareQuantile( 1-pval, 1 ) ); 
+
+  delete h_model_clone;
+  delete h_data_clone;
+  delete h_cov_clone;
+}
+
+inline TH1D* Multiply(TH1D* True, TH2D* SmearMatrix) {
+  TH1D* TrueClone = (TH1D*)(True->Clone());
+
+  int XBins = SmearMatrix->GetXaxis()->GetNbins();
+  int YBins = SmearMatrix->GetYaxis()->GetNbins();
+
+  if (XBins != YBins) { std::cout << "Not symmetric matrix" << std::endl; }
+
+  TVectorD signal(XBins);
+  TMatrixD response(XBins,XBins);
+
+  TH2TV(TrueClone, signal);
+  TH2TM(SmearMatrix, response, kTRUE);
+
+  TVectorD RecoSpace = response * signal;
+  TV2TH(RecoSpace, TrueClone);
+
+  return TrueClone;
 }
 
 #endif
