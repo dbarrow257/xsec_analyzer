@@ -279,3 +279,23 @@ TMatrixD direct_sum( const TMatrixD& m1, const TMatrixD& m2 ) {
   std::vector< const TMatrixD* > matrices = { &m1, &m2 };
   return direct_sum( matrices );
 }
+
+void multiply_1d_hist_by_matrix( TMatrixD* mat, TH1* hist ) {
+  // Copy the histogram contents into a column vector
+  int num_bins = mat->GetNcols();
+  TMatrixD hist_mat( num_bins, 1 );
+  for ( int r = 0; r < num_bins; ++r ) {
+    hist_mat( r, 0 ) = hist->GetBinContent( r + 1 );
+  }
+
+  // Multiply the column vector by the input matrix
+  // TODO: add error handling here related to matrix dimensions
+  TMatrixD hist_mat_transformed( *mat, TMatrixD::EMatrixCreatorsOp2::kMult,
+				 hist_mat );
+
+  // Update the input histogram contents with the new values
+  for ( int r = 0; r < num_bins; ++r ) {
+    double val = hist_mat_transformed( r, 0 );
+    hist->SetBinContent( r + 1, val );
+  }
+}

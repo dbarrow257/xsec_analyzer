@@ -52,6 +52,47 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
     throw;
   }
 
+  // Get the tuned GENIE CV prediction in each true bin (including the
+  // background true bins)
+  TH1D* genie_cv_truth = syst_calc->cv_universe().hist_true_.get();
+  
+  int num_true_signal_bins = 0;
+  for ( int t = 0; t < syst_calc->true_bins_.size(); ++t ) {
+    const auto& tbin = syst_calc->true_bins_.at( t );
+    if ( tbin.type_ == kSignalTrueBin ) ++num_true_signal_bins;
+  }
+
+  // Save the GENIE CV model (before A_C multiplication) using a column vector
+  // of event counts
+  TMatrixD genie_cv_truth_vec( num_true_signal_bins, 1 );
+  for ( int b = 0; b < num_true_signal_bins; ++b ) {
+    double true_evts = genie_cv_truth->GetBinContent( b + 1 );
+    genie_cv_truth_vec( b, 0 ) = true_evts;
+  }
+
+  // Figure out if we are using fake data
+  // If present, then get the fake data event counts in each true bin
+  // (including the background true bins). We hope to approximately reproduce
+  // these event counts in the signal true bins via unfolding the fake data.
+  const auto& fake_data_univ = syst_calc->fake_data_universe();
+  TH1D* fake_data_truth_hist = nullptr;
+
+  bool using_fake_data = false;
+  if ( fake_data_univ ) {
+    using_fake_data = true;
+    fake_data_truth_hist = fake_data_univ->hist_true_.get();
+  }
+
+  // Save the fake data truth (before A_C multiplication) using a column vector
+  // of event counts
+  TMatrixD fake_data_truth( num_true_signal_bins, 1 );
+  if ( using_fake_data ) {
+    for ( int b = 0; b < num_true_signal_bins; ++b ) {
+      double true_evts = fake_data_truth_hist->GetBinContent( b + 1 );
+      fake_data_truth( b, 0 ) = true_evts;
+    }
+  }
+
   std::cout << "\n\nSaving inputs -----------------" << std::endl;
   File->cd();
   File->mkdir("Inputs");
@@ -239,7 +280,7 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 	TH1D* temp_gen_hist = Matrix_To_TH1(temp_gen,gen_short_name,"","Events");
 
 	if (ST == "ACSmeared") {
-	  temp_gen_hist = Multiply(temp_gen_hist,AC_matrix_TH2);
+	  multiply_1d_hist_by_matrix(&AC_matrix,temp_gen_hist);
 	}
 
 	temp_gen_hist->Write(("Pred_"+gen_short_name+"_"+ST).c_str());
@@ -249,6 +290,117 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
       }
     }
 
+  }
+
+  std::cout << "\n\nCalculating Chi2 -----------------" << std::endl;
+  TString MatrixNameToUse = "FDS_Uncer";
+  std::cout << "\n\tUsing " << MatrixNameToUse << " unfolded covariance matrix to calculate Chi2 metrics" << std::endl;
+
+  bool CalculatedChi2 = false;
+
+  for ( const auto& uc_pair : xsec.unfolded_cov_matrix_map_ ) {
+    const auto& uc_name = uc_pair.first;
+    const auto& uc_matrix = uc_pair.second;
+
+    if (uc_name == MatrixNameToUse) {
+      
+      //====================================================================================== 
+      //Loop over the different slices
+      //for ( size_t sl_idx = 0u; sl_idx < sb.slices_.size(); ++sl_idx ) {
+      for ( size_t sl_idx = 0u; sl_idx < 1; ++sl_idx ) {
+	auto& Slice = sb.slices_.at( sl_idx );
+	//The following line will fall over if several active variables are used per Slice
+	auto& SliceVar = sb.slice_vars_.at( Slice.active_var_indices_.front() );
+	
+	std::string SliceVariableName = SliceVar.name_;
+	SliceVariableName.erase(std::remove(SliceVariableName.begin(), SliceVariableName.end(), ' '), SliceVariableName.end());
+	
+	//====================================================================================== 
+	//Loop over the two ResultTypes (Event Counts and Xsec Units)
+	//for (size_t iRT=0;iRT<nResultTypes;iRT++) {
+	for (size_t iRT=0;iRT<1;iRT++) {
+	  std::string RT = ResultTypes[iRT];
+	  
+	  //====================================================================================== 
+	  //Get the unfolded Slice Histogram	  
+	  SliceHistogram* Slice_unf = SliceHistogram::make_slice_histogram( *xsec.result_.unfolded_signal_, Slice, uc_matrix.get() );
+
+	  //====================================================================================== 
+	  //Get the Predictions 
+
+	  //CV Slice
+	  SliceHistogram* slice_cv = SliceHistogram::make_slice_histogram(genie_cv_truth_vec, Slice, nullptr );
+
+	  //Fake data slice
+	  SliceHistogram* slice_truth = nullptr;
+	  if ( using_fake_data ) {
+	    slice_truth = SliceHistogram::make_slice_histogram( fake_data_truth, Slice, nullptr );
+	  }
+
+	  // Keys are legend labels, values are SliceHistogram objects containing
+	  // true-space predictions from the corresponding generator models
+	  auto* slice_gen_map_ptr = new std::map< std::string, SliceHistogram* >();
+	  auto& slice_gen_map = *slice_gen_map_ptr;
+
+	  slice_gen_map[ "unfolded data" ] = Slice_unf;
+	  if ( using_fake_data ) {
+	    slice_gen_map[ "truth" ] = slice_truth;
+	  }
+	  slice_gen_map[ "MicroBooNE Tune" ] = slice_cv;
+
+	  /*
+	  for ( const auto& pair : generator_truth_map ) {
+	    const auto& model_name = pair.first;
+	    TMatrixD* truth_mat = pair.second;
+	    
+	    SliceHistogram* temp_slice = SliceHistogram::make_slice_histogram(*truth_mat, Slice, nullptr );
+	    slice_gen_map[ model_name ] = temp_slice;
+	  }
+	  */
+
+	  // Keys are generator legend labels, values are the results of a chi^2
+	  // test compared to the unfolded data (or, in the case of the unfolded
+	  // data, to the fake data truth)
+	  std::map< std::string, SliceHistogram::Chi2Result > chi2_map;
+	  for ( const auto& pair : slice_gen_map ) {
+	    const auto& name = pair.first;
+	    const auto* slice_h = pair.second;
+
+
+	    // Decide what other slice histogram should be compared to this one,
+	    // then calculate chi^2
+	    SliceHistogram* other = nullptr;
+	    // We don't need to compare the unfolded data to itself, so just skip to
+	    // the next SliceHistogram and leave a dummy Chi2Result object in the map
+	    if ( name == "unfolded data" ) {
+	      chi2_map[ name ] = SliceHistogram::Chi2Result();
+	      continue;
+	    }
+	    // Compare all other distributions to the unfolded data
+	    else {
+	      other = slice_gen_map.at( "unfolded data" );
+	    }
+
+	    // Store the chi^2 results in the map
+	    const auto& chi2_result = chi2_map[ name ] = slice_h->get_chi2( *other );
+
+
+	    std::cout << "Slice " << sl_idx << ", " << name << ": \u03C7\u00b2 = "
+		      << chi2_result.chi2_ << '/' << chi2_result.num_bins_ << " bin";
+	    if ( chi2_result.num_bins_ > 1 ) std::cout << 's';
+	    std::cout << ", p-value = " << chi2_result.p_value_ << '\n';
+	  }
+
+	}
+      }
+
+      CalculatedChi2 = true;
+    }
+  }
+
+  if (!CalculatedChi2) {
+    std::cerr << "Could not find matrix:" << MatrixNameToUse << " in unfolded covariance matrix map. Did not calculate Chi2 metrics" << std::endl;
+    throw;
   }
 
   File->Close();

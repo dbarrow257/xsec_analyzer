@@ -237,6 +237,8 @@ inline TH1D* Multiply(TH1D* True, TH2D* SmearMatrix) {
   TH2TV(TrueClone, signal);
   TH2TM(SmearMatrix, response, kTRUE);
 
+  response = response.T();
+
   TVectorD RecoSpace = response * signal;
   TV2TH(RecoSpace, TrueClone);
 

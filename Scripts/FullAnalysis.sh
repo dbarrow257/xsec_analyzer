@@ -1,10 +1,10 @@
 source setup_stv.sh
 
 PROCESSED_NTUPLE_DIR="/exp/uboone/data/users/barrow/CC2P/"
-UNIV_OUTPUT_FILE=${PROCESSED_NTUPLE_DIR}"/Universes_CC2P_NuWroFakeData.root"
+UNIV_OUTPUT_FILE=${PROCESSED_NTUPLE_DIR}"/Universes_CC2P_GENIEMCClosureTest.root"
 
 MEASUREMENT_OUTPUT_FILE="./Output/"
-UNF_MEAS_OUTPUT_FILE=${MEASUREMENT_OUTPUT_FILE}"/UnfoldedCrossSection_CC2P_NuWroFakeData.root"
+UNF_MEAS_OUTPUT_FILE=${MEASUREMENT_OUTPUT_FILE}"/UnfoldedCrossSection_CC2P_GENIEMCClosureTest.root"
 
 PELEE_NTUPLE_CONFIG="./Configs/files_to_process.txt"
 FPM_CONFIG="./Configs/file_properties.txt"
