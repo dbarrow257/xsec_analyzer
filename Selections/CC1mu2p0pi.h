@@ -65,6 +65,10 @@ private:
   double Reco_kMiss;
   double Reco_PMiss;
   double Reco_PMissMinus;
+
+  double True_CosPlPr;
+  double True_CosMuPsum;
+
   double True_Pt;
   double True_Ptx;
   double True_Pty;

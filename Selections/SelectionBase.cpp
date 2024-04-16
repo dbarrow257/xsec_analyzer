@@ -35,6 +35,7 @@ void SelectionBase::ApplySelection(AnalysisEvent* Event) {
   if (Selected) {
     nPassedEvents++;
   }
+
   eventNumber++;
 }
 

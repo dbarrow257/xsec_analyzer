@@ -83,8 +83,8 @@ void CC1mu2p0pi::ComputeRecoObservables(AnalysisEvent* Event) {
     TVector3 ProtonSummedMomentumVector = LeadingProtonMomentumVector + RecoilProtonMomentumVector;
     float ProtonSummedEnergy = LeadingProtonEnergy + RecoilProtonEnergy;
     
-    Reco_CosPlPr = LeadingProtonMomentumVector.Angle(RecoilProtonMomentumVector);
-    Reco_CosMuPsum = MuonMomentumVector.Angle(ProtonSummedMomentumVector);
+    Reco_CosPlPr = std::cos(LeadingProtonMomentumVector.Angle(RecoilProtonMomentumVector));
+    Reco_CosMuPsum = std::cos(MuonMomentumVector.Angle(ProtonSummedMomentumVector));
 
     STVTools.CalculateSTVs(MuonMomentumVector,ProtonSummedMomentumVector,MuonEnergy,ProtonSummedEnergy);
 
@@ -142,6 +142,9 @@ void CC1mu2p0pi::ComputeTrueObservables(AnalysisEvent* Event) {
     TVector3 ProtonSum_TVector3True = LeadingProton_TVector3True+RecoilProton_TVector3True;
     double ProtonSum_TrueE_GeV = LeadingProton_TrueE_GeV+RecoilProton_TrueE_GeV;
     
+    True_CosPlPr = std::cos(LeadingProton_TVector3True.Angle(RecoilProton_TVector3True));
+    True_CosMuPsum = std::cos(Muon_TVector3True.Angle(ProtonSum_TVector3True));
+
     STVTools.CalculateSTVs(Muon_TVector3True,ProtonSum_TVector3True,Muon_TrueE_GeV,ProtonSum_TrueE_GeV,CalcType);
 
     True_Pt = STVTools.ReturnPt();
@@ -513,6 +516,9 @@ void CC1mu2p0pi::DefineOutputBranches() {
   SetBranch(&Reco_kMiss,"Reco_kMiss",kDouble);
   SetBranch(&Reco_PMiss,"Reco_PMiss",kDouble);
   SetBranch(&Reco_PMissMinus,"Reco_PMissMinus",kDouble);
+
+  SetBranch(&True_CosPlPr,"True_CosPlPr",kDouble);
+  SetBranch(&True_CosMuPsum,"True_CosMuPsum",kDouble);
   SetBranch(&True_Pt,"True_Pt",kDouble);
   SetBranch(&True_Ptx,"True_Ptx",kDouble);
   SetBranch(&True_Pty,"True_Pty",kDouble);
