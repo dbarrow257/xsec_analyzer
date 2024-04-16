@@ -1,6 +1,6 @@
 source setup_stv.sh
 
-PROCESSED_NTUPLE_DIR="/exp/uboone/data/users/barrow/CC2P_wSCEBug/"
+PROCESSED_NTUPLE_DIR="/exp/uboone/data/users/barrow/CC2P/"
 UNIV_OUTPUT_FILE=${PROCESSED_NTUPLE_DIR}"/Universes_CC2P.root"
 
 MEASUREMENT_OUTPUT_FILE="./Output/"
