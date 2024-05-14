@@ -132,6 +132,25 @@ inline void TM2TH2(const TMatrixD Matrix, TH2D* Hist) {
   }
 }
 
+inline void TM2TV(TMatrixD* mat, TVectorD* vec) {
+  if (mat->GetNcols() != 1) {
+    std::cerr << "Tried to fill TVector TMatrix which has more than 1 column!" << std::endl;
+    return;
+  }
+
+  vec = new TVectorD(mat->GetNrows());
+  for (int i=0;i<mat->GetNrows();i++) {
+    vec[i] = (*mat)(i,0);
+  }
+}
+
+inline void TV2TM(TVectorD vec, TMatrixD* mat) {
+  mat = new TMatrixD(vec.GetNrows(),1);
+  for (int i=0;i<vec.GetNrows();i++) {
+    mat->operator()(i,0) = (vec)[i];
+  }
+}
+
 inline void TV2TH(const TVectorD vec, TH1D* histo) {
   // Fill vector to histogram,
   for(Int_t i=0; i<vec.GetNrows(); i++)

@@ -140,6 +140,15 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
   TH2D* AC_matrix_TH2 = new TH2D("ACMatrix","",AC_matrix.GetNrows(),0,AC_matrix.GetNrows(),AC_matrix.GetNrows(),0,AC_matrix.GetNrows());
   TM2TH2(AC_matrix, AC_matrix_TH2);
 
+  TMatrixT<double>* TotalCovarianceMatrix;
+  for ( const auto& uc_pair : xsec.unfolded_cov_matrix_map_ ) {
+    const auto& uc_name = uc_pair.first;
+    const auto& uc_matrix = uc_pair.second;
+    if (uc_name == "total") {
+      TotalCovarianceMatrix = uc_matrix.get();
+    }
+  }
+
   std::cout << "\n\nSaving results -----------------" << std::endl;
 
   std::cout << "Output file - " << OutputFileName << std::endl;
@@ -215,6 +224,45 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
     }
 
     //====================================================================================== 
+    //Lets grab the slice covariance matrices from the total covariance matrix
+
+    File->cd();
+    File->mkdir((std::string("Outputs/TotalCovarianceMatrixSlices/")+RT).c_str());
+    File->cd((std::string("Outputs/TotalCovarianceMatrixSlices/")+RT).c_str());
+
+    for ( size_t sl_idx = 0u; sl_idx < sb.slices_.size(); ++sl_idx ) {
+      auto& Slice = sb.slices_.at( sl_idx );
+      //The following line will fall over if several active variables are used per Slice
+      auto& SliceVar = sb.slice_vars_.at( Slice.active_var_indices_.front() );
+
+      std::string SliceVariableName = SliceVar.name_;
+      SliceVariableName.erase(std::remove(SliceVariableName.begin(), SliceVariableName.end(), ' '), SliceVariableName.end());
+
+      // Note that we need to square the unit conversion factor for the
+      // covariance matrix elements
+      TMatrixD* TotalCovarianceMatrix_Copy = (TMatrixD*)TotalCovarianceMatrix->Clone();
+
+      if (RT == "XsecUnits") {
+        TotalCovarianceMatrix_Copy->operator*=(std::pow( 1.0 / conv_factor, 2 ));
+      }
+
+      SliceHistogram* Slice_unf = SliceHistogram::make_slice_histogram( *xsec.result_.unfolded_signal_, Slice, TotalCovarianceMatrix_Copy );
+      TH1* Slice_unf_hist = Slice_unf->hist_.get();
+      auto TotalCovarianceMatrix_Slice = Slice_unf->cmat_.get_matrix();
+      TMatrixD* TotalCovarianceMatrix_Slice_Mat = (TotalCovarianceMatrix_Slice.get());
+
+      //Include bin width division in covariance matrix
+      int nBins = Slice_unf_hist->GetNbinsX();
+      for (int xBin=0;xBin<nBins;xBin++) {
+	for (int yBin=0;yBin<nBins;yBin++) {
+	  TotalCovarianceMatrix_Slice_Mat->operator()(xBin,yBin) = TotalCovarianceMatrix_Slice->operator()(xBin,yBin)/(Slice_unf_hist->GetXaxis()->GetBinWidth(xBin+1)*Slice_unf_hist->GetXaxis()->GetBinWidth(yBin+1));
+	}
+      }
+      
+      TotalCovarianceMatrix_Slice_Mat->Write(SliceVariableName.c_str());
+    }
+
+    //====================================================================================== 
     //Loop over all the slices taken from the config and save the unfolded distribution/generator prediction
 
     for ( size_t sl_idx = 0u; sl_idx < sb.slices_.size(); ++sl_idx ) {
@@ -257,8 +305,9 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
     }
 
     File->cd();
-    File->mkdir((std::string("Predictions/")+RT).c_str());
-    File->cd((std::string("Predictions/")+RT).c_str());
+    File->mkdir(std::string("Predictions/").c_str());
+    File->mkdir((std::string("Predictions/FullDistribution/")+RT).c_str());
+    File->cd((std::string("Predictions/FullDistribution/")+RT).c_str());
     
     //======================================================================================
     //Loop over all generator predictions and save them to the same output
@@ -267,8 +316,8 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
       std::string ST = SmearTypes[iST];
 
       File->cd();
-      File->mkdir((std::string("Predictions/")+RT+"/"+SmearTypes[iST]).c_str());
-      File->cd((std::string("Predictions/")+RT+"/"+SmearTypes[iST]).c_str());
+      File->mkdir((std::string("Predictions/FullDistribution/")+RT+"/"+SmearTypes[iST]).c_str());
+      File->cd((std::string("Predictions/FullDistribution/")+RT+"/"+SmearTypes[iST]).c_str());
 
       for ( const auto& gen_pair : extr->get_prediction_map()) {
 	std::string gen_short_name = gen_pair.second->name();
@@ -292,6 +341,8 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 
   }
 
+  /*
+  //====================================================================================== 
   std::cout << "\n\nCalculating Chi2 -----------------" << std::endl;
   TString MatrixNameToUse = "FDS_Uncer";
   std::cout << "\n\tUsing " << MatrixNameToUse << " unfolded covariance matrix to calculate Chi2 metrics" << std::endl;
@@ -347,6 +398,7 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 	    slice_gen_map[ "truth" ] = slice_truth;
 	  }
 	  slice_gen_map[ "MicroBooNE Tune" ] = slice_cv;
+  */
 
 	  /*
 	  for ( const auto& pair : generator_truth_map ) {
@@ -358,6 +410,7 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 	  }
 	  */
 
+  /*
 	  // Keys are generator legend labels, values are the results of a chi^2
 	  // test compared to the unfolded data (or, in the case of the unfolded
 	  // data, to the fake data truth)
@@ -401,6 +454,98 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
   if (!CalculatedChi2) {
     std::cerr << "Could not find matrix:" << MatrixNameToUse << " in unfolded covariance matrix map. Did not calculate Chi2 metrics" << std::endl;
     throw;
+  }
+  */
+
+  //====================================================================================== 
+  std::cout << "\n\nSaving MC Prediction w/ and w/o Smearing  -----------------" << std::endl;
+
+  File->cd();
+  File->mkdir("Predictions/MCPredSlices/");
+  File->cd("Predictions/MCPredSlices/");
+
+  //================================================
+  //Pre calculate smeared MC Signal
+  //This is a mess with conversions, but it works
+
+  auto MCSignal_Mat = syst_calc->get_cv_true_signal();
+
+  TVectorD* MCSignal_Vec = new TVectorD(MCSignal_Mat->GetNrows());
+  for (int i=0;i<MCSignal_Mat->GetNrows();i++) {
+    MCSignal_Vec->operator()(i) = MCSignal_Mat->operator()(i,0);
+  }
+
+  TVectorD SmearedMCSignal_Vec = AC_matrix * (*MCSignal_Vec);
+  TMatrixD* SmearedMCSignal_Mat = new TMatrixD(MCSignal_Mat->GetNrows(),1);
+  for (int i=0;i<MCSignal_Mat->GetNrows();i++) {
+    SmearedMCSignal_Mat->operator()(i,0) = SmearedMCSignal_Vec.operator()(i);
+  }
+
+  //================================================================================================================================================
+  //Grab each slice, potentially smear and include xsec conversion factor, calculate Chi2 to unfolded data, prettify and save to disk
+
+  for (size_t iRT=0;iRT<nResultTypes;iRT++) {
+    std::string RT = ResultTypes[iRT];
+
+    File->cd();
+    File->mkdir(("Predictions/MCPredSlices/"+RT).c_str());
+    File->cd(("Predictions/MCPredSlices/"+RT).c_str());
+
+    for (int iST=0;iST<nSmearTypes;iST++) {
+      std::string ST = SmearTypes[iST];
+      
+      File->cd();
+      File->mkdir(("Predictions/MCPredSlices/"+RT+"/"+ST).c_str());
+      File->cd(("Predictions/MCPredSlices/"+RT+"/"+ST).c_str());
+      
+      for ( size_t sl_idx = 0u; sl_idx < sb.slices_.size(); ++sl_idx ) {
+
+	auto& Slice = sb.slices_.at( sl_idx );
+	
+	//The following line will fall over if several active variables are used per Slice
+	auto& SliceVar = sb.slice_vars_.at( Slice.active_var_indices_.front() );
+	
+	std::string SliceVariableName = SliceVar.name_;
+	SliceVariableName.erase(std::remove(SliceVariableName.begin(), SliceVariableName.end(), ' '), SliceVariableName.end());
+	
+	TMatrixD* MCPrediction;
+	if (ST == "ACSmeared") {
+	  MCPrediction = SmearedMCSignal_Mat;
+	} else {
+	  MCPrediction = MCSignal_Mat.get();
+	}
+	
+	//Get the unfolded Slice Histogram
+	//Use the total covariance matrix rather than the FDS one
+	SliceHistogram* SliceUnfData = SliceHistogram::make_slice_histogram( *xsec.result_.unfolded_signal_, Slice, TotalCovarianceMatrix );
+	
+	//Get the MC prediction Slice Histogram
+	SliceHistogram* SliceMCPred = SliceHistogram::make_slice_histogram( *MCPrediction, Slice, nullptr );
+	TH1* SliceMCHist = SliceMCPred->hist_.get();
+	
+	const auto& chi2_result = SliceUnfData->get_chi2( *SliceMCPred );
+	std::cout << "Slice " << sl_idx << ", " << RT << " " << ST << " " << SliceVariableName << ": \u03C7\u00b2 = " << chi2_result.chi2_ << '/' << chi2_result.num_bins_ << " bin";
+	if ( chi2_result.num_bins_ > 1 ) std::cout << 's';                                                                                                                                                        
+	std::cout << ", p-value = " << chi2_result.p_value_ << '\n';
+	
+	SliceMCHist->SetTitle(Form("%4.4f",chi2_result.chi2_));
+	
+	//=======================================================
+	//Prettify the plots for saving to output - divide by bin width and include xsec conversion factor
+	divide_TH1_by_bin_width(SliceMCHist,true);
+	
+	//Convert to xsec
+        if (RT == "XsecUnits") {
+	  SliceMCHist->Scale(1.0 / conv_factor);
+        }
+
+	for (int iBin=1;iBin<=SliceMCHist->GetNbinsX();iBin++) {
+	  std::cout << iBin << " " << SliceMCHist->GetBinContent(iBin) << std::endl;
+	}
+
+	SliceMCHist->Write(SliceVariableName.c_str());
+      }
+    }
   }
 
   File->Close();

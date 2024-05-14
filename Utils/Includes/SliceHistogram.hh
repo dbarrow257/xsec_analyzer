@@ -385,7 +385,6 @@ SliceHistogram::Chi2Result SliceHistogram::get_chi2(
     double counts = hist_->GetBinContent( a + 1 );
     double other_counts = other.hist_->GetBinContent( a + 1 );
 
-    std::cout << counts << " " << other_counts << std::endl;
     diff_vec( 0, a ) = counts - other_counts;
   }
 

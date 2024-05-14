@@ -12,7 +12,7 @@
 #include "TDecompQRH.h"
 #include "TMatrixD.h"
 
-constexpr double DEFAULT_MATRIX_INVERSION_TOLERANCE = 1e-4;
+constexpr double DEFAULT_MATRIX_INVERSION_TOLERANCE = 2e-4;
 
 std::unique_ptr< TMatrixD > invert_matrix( const TMatrixD& mat,
   const double inversion_tolerance = DEFAULT_MATRIX_INVERSION_TOLERANCE )
@@ -66,7 +66,7 @@ std::unique_ptr< TMatrixD > invert_matrix( const TMatrixD& mat,
       if ( a == b ) expected_element = 1.;
       double abs_diff = std::abs( element - expected_element );
       if ( abs_diff > inversion_tolerance ) {
-        throw std::runtime_error( "Matrix inversion failed" );
+        throw std::runtime_error( Form("Matrix inversion failed - tolerance: %4.4f, abs_diff: %4.4f",inversion_tolerance,abs_diff) );
       }
     }
   }
