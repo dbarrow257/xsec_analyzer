@@ -1,9 +1,12 @@
-all: Unfolder Validation
+all: Unfolder Validation MakeMigrationMatrix
 
 Unfolder: Unfolder.C 
 	$(CXX) $(shell root-config --cflags --libs) -O3 -I$(STV_ANALYSIS_DIR)/Utils/Includes $(STV_ANALYSIS_DIR)/Bin/*.o -o $@ $^
 
 Validation: Validation.C 
+	$(CXX) $(shell root-config --cflags --libs) -O3 -I$(STV_ANALYSIS_DIR)/Utils/Includes $(STV_ANALYSIS_DIR)/Bin/*.o -o $@ $^
+
+MakeMigrationMatrix: MakeMigrationMatrix.C
 	$(CXX) $(shell root-config --cflags --libs) -O3 -I$(STV_ANALYSIS_DIR)/Utils/Includes $(STV_ANALYSIS_DIR)/Bin/*.o -o $@ $^
 
 clean:
