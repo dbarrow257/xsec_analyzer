@@ -24,6 +24,8 @@ std::string TextExtension = ".txt";
 bool DumpToText = false;
 bool DumpToPlot = false;
 
+double MigrationMatrixThreshold = 0.50;
+
 void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string OutputDirectory, std::string OutputFileName) {
 
   std::cout << "\nRunning Unfolder.C with options:" << std::endl;
@@ -128,6 +130,53 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 
   std::cout << "Total POT:" << syst_calc->total_bnb_data_pot_ << std::endl;
 
+  //========================================================================================================================================
+  std::cout << "\n\nCalculating Migration Matrix -----------------" << std::endl;
+  std::cout << "Migration matrix threshold set to:" << MigrationMatrixThreshold << std::endl;
+
+  File->cd();
+  File->mkdir("Inputs/MigrationMatrix");
+  File->cd("Inputs/MigrationMatrix");
+
+  for ( size_t sl_idx = 0u; sl_idx < sb.slices_.size(); ++sl_idx ) {
+    auto& Slice = sb.slices_.at( sl_idx );
+    //The following line will fall over if several active variables are used per Slice                                                                                                                              
+    auto& SliceVar = sb.slice_vars_.at( Slice.active_var_indices_.front() );
+
+    std::string SliceVariableName = SliceVar.name_;
+    SliceVariableName.erase(std::remove(SliceVariableName.begin(), SliceVariableName.end(), ' '), SliceVariableName.end());
+    if (SliceVariableName == "recobinnumber") continue;
+
+    TMatrixD TrueSignal_Mat = *(syst_calc->get_cv_true_signal().get());
+    const TMatrixD* smearcept_Mat = smearcept.get();
+
+    SliceHistogram* SliceHist = SliceHistogram::make_slice_histogram( TrueSignal_Mat, Slice, smearcept_Mat );
+    TH1* TrueSignal_Hist = SliceHist->hist_.get();
+    auto SmearceptSlice = SliceHist->cmat_.get_matrix();
+    TMatrixD* SmearceptSlice_Mat = SmearceptSlice.get();
+
+    TMatrixD* MigrationMatrix = new TMatrixD(*SmearceptSlice_Mat);
+    for (int yBin=0;yBin<TrueSignal_Hist->GetNbinsX();yBin++) {
+      double Sum = 0.;
+      for (int xBin=0;xBin<TrueSignal_Hist->GetNbinsX();xBin++) {
+	MigrationMatrix->operator()(xBin,yBin) = MigrationMatrix->operator()(xBin,yBin)/TrueSignal_Hist->GetBinContent(yBin+1);
+	Sum += MigrationMatrix->operator()(xBin,yBin);
+      }
+      for (int xBin=0;xBin<TrueSignal_Hist->GetNbinsX();xBin++) {
+	MigrationMatrix->operator()(xBin,yBin) = MigrationMatrix->operator()(xBin,yBin)/Sum;
+      } 
+    }    
+
+    for (int xBin=0;xBin<TrueSignal_Hist->GetNbinsX();xBin++) {
+      if (MigrationMatrix->operator()(xBin,xBin) < MigrationMatrixThreshold) {
+	std::cout << "Migration Matrix Diagonal Bin Below Threshold! : Slice:" << sl_idx << "(" << std::setw(20) << SliceVariableName << ")" << " , Bin:" << xBin  << " , Value:" << MigrationMatrix->operator()(xBin,xBin) << std::endl;
+      }
+    }
+
+    MigrationMatrix->Write(SliceVariableName.c_str());
+  }
+
+  //========================================================================================================================================
   std::cout << "\n\nUnfolding -----------------" << std::endl;
 
   auto xsec = extr->get_unfolded_events();
@@ -148,6 +197,12 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
       TotalCovarianceMatrix = uc_matrix.get();
     }
   }
+
+  //Smear GENIE CV truth
+  TMatrixD genie_cv_truth_smeared( AC_matrix, TMatrixD::kMult, genie_cv_truth_vec );
+
+  //Smear FDS
+  TMatrixD fake_data_truth_smeared( AC_matrix, TMatrixD::kMult, fake_data_truth );
 
   std::cout << "\n\nSaving results -----------------" << std::endl;
 
@@ -341,121 +396,110 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 
   }
 
-  /*
   //====================================================================================== 
-  std::cout << "\n\nCalculating Chi2 -----------------" << std::endl;
-  TString MatrixNameToUse = "FDS_Uncer";
-  std::cout << "\n\tUsing " << MatrixNameToUse << " unfolded covariance matrix to calculate Chi2 metrics" << std::endl;
+  if ( using_fake_data ) {
+    std::cout << "\n\nCalculating Chi2 for FDS -----------------" << std::endl;
 
-  bool CalculatedChi2 = false;
+    File->cd();
+    File->mkdir("FDS");
+    File->cd("FDS");
 
-  for ( const auto& uc_pair : xsec.unfolded_cov_matrix_map_ ) {
-    const auto& uc_name = uc_pair.first;
-    const auto& uc_matrix = uc_pair.second;
-
-    if (uc_name == MatrixNameToUse) {
+    TString MatrixNameToUse = "FDS_Uncer";
+    std::cout << "\n\tUsing " << MatrixNameToUse << " unfolded covariance matrix to calculate Chi2 metrics" << std::endl;
+    
+    bool CalculatedChi2 = false;
+    
+    for ( const auto& uc_pair : xsec.unfolded_cov_matrix_map_ ) {
+      const auto& uc_name = uc_pair.first;
+      const auto& uc_matrix = uc_pair.second;
       
-      //====================================================================================== 
-      //Loop over the different slices
-      //for ( size_t sl_idx = 0u; sl_idx < sb.slices_.size(); ++sl_idx ) {
-      for ( size_t sl_idx = 0u; sl_idx < 1; ++sl_idx ) {
-	auto& Slice = sb.slices_.at( sl_idx );
-	//The following line will fall over if several active variables are used per Slice
-	auto& SliceVar = sb.slice_vars_.at( Slice.active_var_indices_.front() );
-	
-	std::string SliceVariableName = SliceVar.name_;
-	SliceVariableName.erase(std::remove(SliceVariableName.begin(), SliceVariableName.end(), ' '), SliceVariableName.end());
+      if (uc_name == MatrixNameToUse) {
 	
 	//====================================================================================== 
 	//Loop over the two ResultTypes (Event Counts and Xsec Units)
-	//for (size_t iRT=0;iRT<nResultTypes;iRT++) {
-	for (size_t iRT=0;iRT<1;iRT++) {
+	for (size_t iRT=0;iRT<nResultTypes;iRT++) {
 	  std::string RT = ResultTypes[iRT];
 	  
-	  //====================================================================================== 
-	  //Get the unfolded Slice Histogram	  
-	  SliceHistogram* Slice_unf = SliceHistogram::make_slice_histogram( *xsec.result_.unfolded_signal_, Slice, uc_matrix.get() );
+	  File->cd();
+	  File->mkdir(("FDS/"+RT).c_str());
+	  File->cd(("FDS/"+RT).c_str());
 
 	  //====================================================================================== 
-	  //Get the Predictions 
-
-	  //CV Slice
-	  SliceHistogram* slice_cv = SliceHistogram::make_slice_histogram(genie_cv_truth_vec, Slice, nullptr );
-
-	  //Fake data slice
-	  SliceHistogram* slice_truth = nullptr;
-	  if ( using_fake_data ) {
-	    slice_truth = SliceHistogram::make_slice_histogram( fake_data_truth, Slice, nullptr );
-	  }
-
-	  // Keys are legend labels, values are SliceHistogram objects containing
-	  // true-space predictions from the corresponding generator models
-	  auto* slice_gen_map_ptr = new std::map< std::string, SliceHistogram* >();
-	  auto& slice_gen_map = *slice_gen_map_ptr;
-
-	  slice_gen_map[ "unfolded data" ] = Slice_unf;
-	  if ( using_fake_data ) {
-	    slice_gen_map[ "truth" ] = slice_truth;
-	  }
-	  slice_gen_map[ "MicroBooNE Tune" ] = slice_cv;
-  */
-
-	  /*
-	  for ( const auto& pair : generator_truth_map ) {
-	    const auto& model_name = pair.first;
-	    TMatrixD* truth_mat = pair.second;
+	  //Loop over the different slices
+	  for ( size_t sl_idx = 0u; sl_idx < sb.slices_.size(); ++sl_idx ) {
+	    //for ( size_t sl_idx = 0u; sl_idx < 1; ++sl_idx ) {
+	    auto& Slice = sb.slices_.at( sl_idx );
+	    //The following line will fall over if several active variables are used per Slice
+	    auto& SliceVar = sb.slice_vars_.at( Slice.active_var_indices_.front() );
 	    
-	    SliceHistogram* temp_slice = SliceHistogram::make_slice_histogram(*truth_mat, Slice, nullptr );
-	    slice_gen_map[ model_name ] = temp_slice;
-	  }
-	  */
+	    std::string SliceVariableName = SliceVar.name_;
+	    SliceVariableName.erase(std::remove(SliceVariableName.begin(), SliceVariableName.end(), ' '), SliceVariableName.end());
+	   
+	    File->cd();
+	    File->mkdir(("FDS/"+RT+"/"+SliceVariableName).c_str());
+	    File->cd(("FDS/"+RT+"/"+SliceVariableName).c_str());
+	    
+	    //====================================================================================== 
+	    //Get the unfolded Slice Histogram	  
+	    SliceHistogram* Slice_unf = SliceHistogram::make_slice_histogram( *xsec.result_.unfolded_signal_, Slice, uc_matrix.get() );
+	    TH1* Slice_unf_hist = Slice_unf->hist_.get();
 
-  /*
-	  // Keys are generator legend labels, values are the results of a chi^2
-	  // test compared to the unfolded data (or, in the case of the unfolded
-	  // data, to the fake data truth)
-	  std::map< std::string, SliceHistogram::Chi2Result > chi2_map;
-	  for ( const auto& pair : slice_gen_map ) {
-	    const auto& name = pair.first;
-	    const auto* slice_h = pair.second;
+	    auto FDSCovMat_Ptr = Slice_unf->cmat_.get_matrix();
+	    TMatrixD* FDSCovMat_Slice = FDSCovMat_Ptr.get();
 
+	    //====================================================================================== 
+	    //Get the Predictions 
+	    
+	    //CV Slice
+	    SliceHistogram* slice_cv = SliceHistogram::make_slice_histogram( genie_cv_truth_smeared, Slice, nullptr );
+	    TH1* genie_cv_truth_smeared_slice = slice_cv->hist_.get();
 
-	    // Decide what other slice histogram should be compared to this one,
-	    // then calculate chi^2
-	    SliceHistogram* other = nullptr;
-	    // We don't need to compare the unfolded data to itself, so just skip to
-	    // the next SliceHistogram and leave a dummy Chi2Result object in the map
-	    if ( name == "unfolded data" ) {
-	      chi2_map[ name ] = SliceHistogram::Chi2Result();
-	      continue;
+	    const auto& cv_chi2_result = Slice_unf->get_chi2( *slice_cv );
+	    std::cout << "Slice " << sl_idx << ", " << "MicroBooNE Tune" << ": \u03C7\u00b2 = "
+		      << cv_chi2_result.chi2_ << '/' << cv_chi2_result.num_bins_ << " bin";
+	    if ( cv_chi2_result.num_bins_ > 1 ) std::cout << 's';
+	    std::cout << ", p-value = " << cv_chi2_result.p_value_ << '\n';
+	    genie_cv_truth_smeared_slice->SetTitle(Form("%4.4f",cv_chi2_result.chi2_));
+
+	    //Fake data slice
+	    SliceHistogram* slice_FDS = SliceHistogram::make_slice_histogram( fake_data_truth_smeared, Slice, nullptr );
+	    TH1* FDS_slice = slice_FDS->hist_.get();
+	    
+	    const auto& FDS_chi2_result = Slice_unf->get_chi2( *slice_FDS );
+	    std::cout << "Slice " << sl_idx << ", " << "FDS" << ": \u03C7\u00b2 = "
+		      << FDS_chi2_result.chi2_ << '/' << FDS_chi2_result.num_bins_ << " bin";
+	    if ( FDS_chi2_result.num_bins_ > 1 ) std::cout << 's';
+	    std::cout << ", p-value = " << FDS_chi2_result.p_value_ << '\n';
+	    FDS_slice->SetTitle(Form("%4.4f",FDS_chi2_result.chi2_));
+	    
+	    Slice_unf_hist->Scale(1.0/conv_factor,"width");
+	    genie_cv_truth_smeared_slice->Scale(1.0/conv_factor,"width");
+	    FDS_slice->Scale(1.0/conv_factor,"width");
+	    FDSCovMat_Slice->operator*=(std::pow( 1.0 / conv_factor, 2 ));
+
+	    int nBins = Slice_unf_hist->GetNbinsX();
+	    for (int xBin=0;xBin<nBins;xBin++) {
+	      for (int yBin=0;yBin<nBins;yBin++) {
+		FDSCovMat_Slice->operator()(xBin,yBin) = FDSCovMat_Slice->operator()(xBin,yBin)/(Slice_unf_hist->GetXaxis()->GetBinWidth(xBin+1)*Slice_unf_hist->GetXaxis()->GetBinWidth(yBin+1));
+	      }
 	    }
-	    // Compare all other distributions to the unfolded data
-	    else {
-	      other = slice_gen_map.at( "unfolded data" );
-	    }
 
-	    // Store the chi^2 results in the map
-	    const auto& chi2_result = chi2_map[ name ] = slice_h->get_chi2( *other );
-
-
-	    std::cout << "Slice " << sl_idx << ", " << name << ": \u03C7\u00b2 = "
-		      << chi2_result.chi2_ << '/' << chi2_result.num_bins_ << " bin";
-	    if ( chi2_result.num_bins_ > 1 ) std::cout << 's';
-	    std::cout << ", p-value = " << chi2_result.p_value_ << '\n';
+	    FDSCovMat_Slice->Write("FDSUncerCovMat");
+	    Slice_unf_hist->Write("UnfoldedData");
+	    genie_cv_truth_smeared_slice->Write("CVPred_Smeared");
+	    FDS_slice->Write("FakeDataPred_Smeared");
 	  }
-
 	}
+	
+	CalculatedChi2 = true;
       }
-
-      CalculatedChi2 = true;
+    }
+    
+    if (!CalculatedChi2) {
+      std::cerr << "Could not find matrix:" << MatrixNameToUse << " in unfolded covariance matrix map. Did not calculate Chi2 metrics" << std::endl;
+      throw;
     }
   }
-
-  if (!CalculatedChi2) {
-    std::cerr << "Could not find matrix:" << MatrixNameToUse << " in unfolded covariance matrix map. Did not calculate Chi2 metrics" << std::endl;
-    throw;
-  }
-  */
 
   //====================================================================================== 
   std::cout << "\n\nSaving MC Prediction w/ and w/o Smearing  -----------------" << std::endl;
@@ -538,10 +582,6 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
         if (RT == "XsecUnits") {
 	  SliceMCHist->Scale(1.0 / conv_factor);
         }
-
-	for (int iBin=1;iBin<=SliceMCHist->GetNbinsX();iBin++) {
-	  std::cout << iBin << " " << SliceMCHist->GetBinContent(iBin) << std::endl;
-	}
 
 	SliceMCHist->Write(SliceVariableName.c_str());
       }

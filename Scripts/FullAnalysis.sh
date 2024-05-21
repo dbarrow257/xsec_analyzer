@@ -1,7 +1,7 @@
 source setup_stv.sh
 
 PROCESSED_NTUPLE_DIR="/exp/uboone/data/users/barrow/CC2P/"
-UNIV_OUTPUT_FILE=${PROCESSED_NTUPLE_DIR}"/Universes_CC2P.root"
+UNIV_OUTPUT_FILE=${PROCESSED_NTUPLE_DIR}"/Universes_CC2P_NuWroFDS.root"
 
 MEASUREMENT_OUTPUT_FILE="./Output/"
 UNF_MEAS_OUTPUT_FILE=${MEASUREMENT_OUTPUT_FILE}"/UnfoldedCrossSection_CC2P.root"
@@ -48,6 +48,10 @@ while [[ $# -gt 0 ]]; do
 	  DO_UNFOLD=1
 	  shift # past argument
 	  ;;
+      -v|--validate)
+	  DO_VALIDATE=1
+	  shift # past argument
+	  ;;
       -*|--*)
 	  echo "Unknown option $1"
 	  exit 1
@@ -73,4 +77,8 @@ fi
 
 if [[ $DO_UNFOLD -eq 1 ]]; then
     ./Scripts/Unfolder.sh ${XSEC_CONFIG} ${SLICE_CONFIG} ${UNF_MEAS_OUTPUT_FILE}
+fi
+
+if [[ $DO_VALIDATE -eq 1 ]]; then
+    ./Scripts/Validate.sh ${XSEC_CONFIG} ${SLICE_CONFIG} ${UNF_MEAS_OUTPUT_FILE}
 fi
