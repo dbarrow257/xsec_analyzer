@@ -31,11 +31,10 @@ void CC1mu2p0pi::ComputeRecoObservables(AnalysisEvent* Event) {
     float Muon_X = Event->track_dirx_->at(muon_candidate_idx_);
     float Muon_Y = Event->track_diry_->at(muon_candidate_idx_);
     float Muon_Z = Event->track_dirz_->at(muon_candidate_idx_);
-    TVector3 MuonMomentumVector = TVector3(Muon_X, Muon_Y, Muon_Z);
-    MuonMomentumVector = MuonMomentumVector.Unit() * MuonMomentum;
+    *MuonMomentumVector_Reco = TVector3(Muon_X, Muon_Y, Muon_Z) * MuonMomentum;
 
     if (MuonTrackStartDistance > MuonTrackEndDistance) {
-      MuonMomentumVector *= -1.0;
+      MuonMomentumVector_Reco->operator*=(-1.0);
     }
 
     //========================================================================================================================================================================
@@ -51,11 +50,10 @@ void CC1mu2p0pi::ComputeRecoObservables(AnalysisEvent* Event) {
     float LeadingProton_X = Event->track_dirx_->at( LeadingProtonIndex );
     float LeadingProton_Y = Event->track_diry_->at( LeadingProtonIndex );
     float LeadingProton_Z = Event->track_dirz_->at( LeadingProtonIndex );
-    TVector3 LeadingProtonMomentumVector = TVector3(LeadingProton_X, LeadingProton_Y, LeadingProton_Z);
-    LeadingProtonMomentumVector = LeadingProtonMomentumVector.Unit() * LeadingProtonMomentum;
+    *LeadingProtonMomentumVector_Reco = TVector3(LeadingProton_X, LeadingProton_Y, LeadingProton_Z) * LeadingProtonMomentum;
 
     if (LeadingProtonTrackStartDistance > LeadingProtonTrackEndDistance) {
-      LeadingProtonMomentumVector *= -1.0;
+      LeadingProtonMomentumVector_Reco->operator*=(-1.0);
     }
     
     //========================================================================================================================================================================
@@ -71,22 +69,21 @@ void CC1mu2p0pi::ComputeRecoObservables(AnalysisEvent* Event) {
     float RecoilProton_X = Event->track_dirx_->at( RecoilProtonIndex );
     float RecoilProton_Y = Event->track_diry_->at( RecoilProtonIndex );
     float RecoilProton_Z = Event->track_dirz_->at( RecoilProtonIndex );
-    TVector3 RecoilProtonMomentumVector = TVector3(RecoilProton_X, RecoilProton_Y, RecoilProton_Z);
-    RecoilProtonMomentumVector = RecoilProtonMomentumVector.Unit() * RecoilProtonMomentum;
+    *RecoilProtonMomentumVector_Reco = TVector3(RecoilProton_X, RecoilProton_Y, RecoilProton_Z) * RecoilProtonMomentum;
 
     if (RecoilProtonTrackStartDistance > RecoilProtonTrackEndDistance) {
-      RecoilProtonMomentumVector *= -1.0;
+      RecoilProtonMomentumVector_Reco->operator*=(-1.0);
     }
 
     //========================================================================================================================================================================
     
-    TVector3 ProtonSummedMomentumVector = LeadingProtonMomentumVector + RecoilProtonMomentumVector;
+    TVector3 ProtonSummedMomentumVector = *LeadingProtonMomentumVector_Reco + *RecoilProtonMomentumVector_Reco;
     float ProtonSummedEnergy = LeadingProtonEnergy + RecoilProtonEnergy;
     
-    Reco_CosPlPr = std::cos(LeadingProtonMomentumVector.Angle(RecoilProtonMomentumVector));
-    Reco_CosMuPsum = std::cos(MuonMomentumVector.Angle(ProtonSummedMomentumVector));
+    Reco_CosPlPr = std::cos((*LeadingProtonMomentumVector_Reco).Angle(*RecoilProtonMomentumVector_Reco));
+    Reco_CosMuPsum = std::cos((*MuonMomentumVector_Reco).Angle(ProtonSummedMomentumVector));
 
-    STVTools.CalculateSTVs(MuonMomentumVector,ProtonSummedMomentumVector,MuonEnergy,ProtonSummedEnergy);
+    STVTools.CalculateSTVs(*MuonMomentumVector_Reco,ProtonSummedMomentumVector,MuonEnergy,ProtonSummedEnergy);
 
     Reco_Pt = STVTools.ReturnPt();
     Reco_Ptx = STVTools.ReturnPtx();
@@ -118,34 +115,42 @@ void CC1mu2p0pi::ComputeTrueObservables(AnalysisEvent* Event) {
 
   if (sig_two_protons_above_thresh_ && sig_one_muon_above_thres_ && sig_no_pions_) {
 
+    //========================================================================================================================================================================
+
     double Muon_MCParticlePx = Event->mc_nu_daughter_px_->at(TrueMuonIndex);
     double Muon_MCParticlePy = Event->mc_nu_daughter_py_->at(TrueMuonIndex);
     double Muon_MCParticlePz = Event->mc_nu_daughter_pz_->at(TrueMuonIndex);
-    TVector3 Muon_TVector3True(Muon_MCParticlePx,Muon_MCParticlePy,Muon_MCParticlePz);
-    double Muon_TrueMomentum_GeV = Muon_TVector3True.Mag(); // GeV                                                                                                                                                    
+    *Muon_TVector3True = TVector3(Muon_MCParticlePx,Muon_MCParticlePy,Muon_MCParticlePz);
+    double Muon_TrueMomentum_GeV = (*Muon_TVector3True).Mag(); // GeV                                                                                                                                                    
     double Muon_TrueE_GeV = TMath::Sqrt( TMath::Power(Muon_TrueMomentum_GeV,2.) + TMath::Power(MUON_MASS,2.) ); // GeV
     
+    //========================================================================================================================================================================
+
     double LeadingProton_MCParticlePx = Event->mc_nu_daughter_px_->at(TrueLeadingProtonIndex);
     double LeadingProton_MCParticlePy = Event->mc_nu_daughter_py_->at(TrueLeadingProtonIndex);
     double LeadingProton_MCParticlePz = Event->mc_nu_daughter_pz_->at(TrueLeadingProtonIndex);
-    TVector3 LeadingProton_TVector3True(LeadingProton_MCParticlePx,LeadingProton_MCParticlePy,LeadingProton_MCParticlePz);
-    double LeadingProton_TrueMomentum_GeV = LeadingProton_TVector3True.Mag(); // GeV
+    *LeadingProton_TVector3True = TVector3(LeadingProton_MCParticlePx,LeadingProton_MCParticlePy,LeadingProton_MCParticlePz);
+    double LeadingProton_TrueMomentum_GeV = (*LeadingProton_TVector3True).Mag(); // GeV
     double LeadingProton_TrueE_GeV = TMath::Sqrt( TMath::Power(LeadingProton_TrueMomentum_GeV,2.) + TMath::Power(PROTON_MASS,2.) ); // GeV
+
+    //========================================================================================================================================================================
 
     double RecoilProton_MCParticlePx = Event->mc_nu_daughter_px_->at(TrueRecoilProtonIndex);
     double RecoilProton_MCParticlePy = Event->mc_nu_daughter_py_->at(TrueRecoilProtonIndex);
     double RecoilProton_MCParticlePz = Event->mc_nu_daughter_pz_->at(TrueRecoilProtonIndex);
-    TVector3 RecoilProton_TVector3True(RecoilProton_MCParticlePx,RecoilProton_MCParticlePy,RecoilProton_MCParticlePz);
-    double RecoilProton_TrueMomentum_GeV = RecoilProton_TVector3True.Mag(); // GeV
+    *RecoilProton_TVector3True = TVector3(RecoilProton_MCParticlePx,RecoilProton_MCParticlePy,RecoilProton_MCParticlePz);
+    double RecoilProton_TrueMomentum_GeV = (*RecoilProton_TVector3True).Mag(); // GeV
     double RecoilProton_TrueE_GeV = TMath::Sqrt( TMath::Power(RecoilProton_TrueMomentum_GeV,2.) + TMath::Power(PROTON_MASS,2.) ); // GeV
 
-    TVector3 ProtonSum_TVector3True = LeadingProton_TVector3True+RecoilProton_TVector3True;
+    //========================================================================================================================================================================
+
+    TVector3 ProtonSum_TVector3True = *LeadingProton_TVector3True+*RecoilProton_TVector3True;
     double ProtonSum_TrueE_GeV = LeadingProton_TrueE_GeV+RecoilProton_TrueE_GeV;
     
-    True_CosPlPr = std::cos(LeadingProton_TVector3True.Angle(RecoilProton_TVector3True));
-    True_CosMuPsum = std::cos(Muon_TVector3True.Angle(ProtonSum_TVector3True));
+    True_CosPlPr = std::cos((*LeadingProton_TVector3True).Angle(*RecoilProton_TVector3True));
+    True_CosMuPsum = std::cos((*Muon_TVector3True).Angle(ProtonSum_TVector3True));
 
-    STVTools.CalculateSTVs(Muon_TVector3True,ProtonSum_TVector3True,Muon_TrueE_GeV,ProtonSum_TrueE_GeV,CalcType);
+    STVTools.CalculateSTVs(*Muon_TVector3True,ProtonSum_TVector3True,Muon_TrueE_GeV,ProtonSum_TrueE_GeV,CalcType);
 
     True_Pt = STVTools.ReturnPt();
     True_Ptx = STVTools.ReturnPtx();
@@ -517,6 +522,10 @@ void CC1mu2p0pi::DefineOutputBranches() {
   SetBranch(&Reco_PMiss,"Reco_PMiss",kDouble);
   SetBranch(&Reco_PMissMinus,"Reco_PMissMinus",kDouble);
 
+  SetBranch(MuonMomentumVector_Reco,"MuonMomentumVector_Reco",kTVector);
+  SetBranch(LeadingProtonMomentumVector_Reco,"LeadingProtonMomentumVector_Reco",kTVector);
+  SetBranch(RecoilProtonMomentumVector_Reco,"RecoilProtonMomentumVector_Reco",kTVector);
+
   SetBranch(&True_CosPlPr,"True_CosPlPr",kDouble);
   SetBranch(&True_CosMuPsum,"True_CosMuPsum",kDouble);
   SetBranch(&True_Pt,"True_Pt",kDouble);
@@ -541,4 +550,9 @@ void CC1mu2p0pi::DefineOutputBranches() {
   SetBranch(&True_kMiss,"True_kMiss",kDouble);
   SetBranch(&True_PMiss,"True_PMiss",kDouble);
   SetBranch(&True_PMissMinus,"True_PMissMinus",kDouble);
+
+  SetBranch(Muon_TVector3True,"MuonMomentumVector_True",kTVector);
+  SetBranch(LeadingProton_TVector3True,"LeadingProtonMomentumVector_True",kTVector);
+  SetBranch(RecoilProton_TVector3True,"RecoilProtonMomentumVector_True",kTVector);
+
 }

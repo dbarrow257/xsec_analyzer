@@ -16,6 +16,7 @@ class CC1mu2p0pi : virtual SelectionBase {
   void DefineConstants();
   
 private:
+
   bool sel_reco_vertex_in_FV_;
   bool sel_has_muon_candidate_;
   bool sel_nu_mu_cc_;
@@ -66,6 +67,10 @@ private:
   double Reco_PMiss;
   double Reco_PMissMinus;
 
+  MyPointer<TVector3> MuonMomentumVector_Reco;
+  MyPointer<TVector3> LeadingProtonMomentumVector_Reco;
+  MyPointer<TVector3> RecoilProtonMomentumVector_Reco;
+
   double True_CosPlPr;
   double True_CosMuPsum;
 
@@ -95,6 +100,10 @@ private:
   int TrueLeadingProtonIndex;
   int TrueRecoilProtonIndex;
   int TrueMuonIndex;
+
+  MyPointer<TVector3> Muon_TVector3True;
+  MyPointer<TVector3> LeadingProton_TVector3True;
+  MyPointer<TVector3> RecoilProton_TVector3True;
 
   STVCalcType CalcType;
 };
