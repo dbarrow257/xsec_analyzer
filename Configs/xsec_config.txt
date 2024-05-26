@@ -1,4 +1,4 @@
-UnivFile /exp/uboone/data/users/barrow/CC2P_AdditionalVariables/Universes_CC2P.root
+UnivFile /exp/uboone/data/users/barrow/CC2P/Universes_CC2P.root
 SystFile ./Configs/systcalc.conf
 UnivTDirName tutorial_1D_proton
 FPFile ./Configs/file_properties.txt

@@ -12,7 +12,7 @@
 #include "TDecompQRH.h"
 #include "TMatrixD.h"
 
-constexpr double DEFAULT_MATRIX_INVERSION_TOLERANCE = 2e-4;
+constexpr double DEFAULT_MATRIX_INVERSION_TOLERANCE = 1;
 
 std::unique_ptr< TMatrixD > invert_matrix( const TMatrixD& mat,
   const double inversion_tolerance = DEFAULT_MATRIX_INVERSION_TOLERANCE )
