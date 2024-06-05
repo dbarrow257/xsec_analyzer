@@ -25,6 +25,7 @@ private:
   bool sel_containedparticles;
   bool sel_correctparticles;
   bool sel_momentum_threshold_passed_;
+  bool sel_nslice_eq_1;
 
   bool sig_ccnc_;
   bool sig_is_numu_;

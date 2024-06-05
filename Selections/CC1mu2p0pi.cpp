@@ -317,6 +317,11 @@ bool CC1mu2p0pi::Selection(AnalysisEvent* Event) {
   FV_noBorder.Y_Max = 116.5;
   FV_noBorder.Z_Min = 0.;
   FV_noBorder.Z_Max = 1036.8;
+
+  //==============================================================================================================================
+  //Is there exactly one neutrino-like object in the reconstruction
+  // (DB: 05/06/2024: Was previously using skimmed files - hopefully shouldn't affect things)
+  sel_nslice_eq_1 = (Event->nslice_ == 1);
   
   //==============================================================================================================================
   //Vertex in FV?
@@ -355,7 +360,7 @@ bool CC1mu2p0pi::Selection(AnalysisEvent* Event) {
 
   //==============================================================================================================================
   //DB Does the event pass the numuCC0pi selection?
-  sel_nu_mu_cc_ = sel_reco_vertex_in_FV_ && sel_has_muon_candidate_;
+  sel_nu_mu_cc_ = sel_nslice_eq_1 && sel_reco_vertex_in_FV_ && sel_has_muon_candidate_;
 
   //==============================================================================================================================
   //DB Require exactly 3 PFP's
@@ -476,6 +481,7 @@ bool CC1mu2p0pi::Selection(AnalysisEvent* Event) {
 void CC1mu2p0pi::DefineOutputBranches() {
   SetBranch(&sel_reco_vertex_in_FV_,"sel_reco_vertex_in_FV",kBool);
   SetBranch(&sel_has_muon_candidate_,"sel_has_muon_candidate",kBool);
+  SetBranch(&sel_nslice_eq_1,"sel_nslice_eq_1",kBool);
   SetBranch(&sel_nu_mu_cc_,"sel_nu_mu_cc",kBool);
   SetBranch(&sel_npfps_eq_3,"sel_npfps_eq_3",kBool);
   SetBranch(&sel_ntracks_eq_3,"sel_ntracks_eq_3",kBool);
