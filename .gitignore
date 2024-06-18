@@ -2,7 +2,11 @@
 
 UniverseMaker/univmake
 NTupleProcessing/ProcessNTuples
-Plotting/Slice_Plots
+NTupleProcessing/CalculateEfficiency
+NTupleProcessing/EventCounter
+
+Plotting/mySlicePlotting
+
 Unfolding/Unfolder
 Unfolding/Validation
 Unfolding/MakeMigrationMatrix

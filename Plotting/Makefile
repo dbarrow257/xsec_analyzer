@@ -1,9 +1,6 @@
-all: Slice_Plots 
+all: mySlicePlotting
 
-Slice_Plots: Slice_Plots.C 
-	$(CXX) $(shell root-config --cflags --libs) -O3 -I$(STV_ANALYSIS_DIR)/Utils/Includes $(STV_ANALYSIS_DIR)/Bin/*.o -o $@ $^
-
-plots: plots.C
+mySlicePlotting: mySlicePlotting.C
 	$(CXX) $(shell root-config --cflags --libs) -O3 -I$(STV_ANALYSIS_DIR)/Utils/Includes $(STV_ANALYSIS_DIR)/Bin/*.o -o $@ $^
 
 clean:

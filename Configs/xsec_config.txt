@@ -1,4 +1,3 @@
-#UnivFile /exp/uboone/data/users/barrow/CC2P_NewFiles/Universes_CC2P_NuWroFDS.root
 UnivFile /exp/uboone/data/users/barrow/CC2P_NewFiles/Universes_CC2P.root
 SystFile ./Configs/systcalc.conf
 UnivTDirName tutorial_1D_proton
