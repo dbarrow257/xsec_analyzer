@@ -4,6 +4,7 @@ UniverseMaker/univmake
 NTupleProcessing/ProcessNTuples
 NTupleProcessing/CalculateEfficiency
 NTupleProcessing/EventCounter
+NTupleProcessing/Plot
 
 Plotting/mySlicePlotting
 

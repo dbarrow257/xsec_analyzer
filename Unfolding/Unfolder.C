@@ -139,7 +139,7 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
   }
 
   //========================================================================================================================================
-  //Grab the pre-unfolding MC prediction slices
+  //Grab the pre-unfolding MC prediction slices, also grab the total covariance matrix slices
 
   File->mkdir("Inputs/MCSlices");
   File->cd("Inputs/MCSlices");
@@ -160,19 +160,30 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
     TH1* SliceHist = Slice_MC->hist_.get();
 
     SliceHist->Write(SliceVariableName.c_str());
+  }
 
-    File->mkdir(("Inputs/MCSlices/"+SliceVariableName+"/Matrices").c_str());
-    File->cd(("Inputs/MCSlices/"+SliceVariableName+"/Matrices").c_str());
+  File->mkdir("Inputs/TotalCovarianceMatrix");
+  File->cd("Inputs/TotalCovarianceMatrix");
+
+  for ( size_t sl_idx = 0u; sl_idx < sb.slices_.size(); ++sl_idx ) {
+    auto& Slice = sb.slices_.at( sl_idx );
+    //The following line will fall over if several active variables are used per Slice
+    auto& SliceVar = sb.slice_vars_.at( Slice.active_var_indices_.front() );
+
+    std::string SliceVariableName = SliceVar.name_;
+    SliceVariableName.erase(std::remove(SliceVariableName.begin(), SliceVariableName.end(), ' '), SliceVariableName.end());
 
     for ( const auto& matrix_pair : *covariances ) {
       const std::string& matrix_key = matrix_pair.first;
       auto temp_cov_mat = matrix_pair.second.get_matrix();
       
+      if (matrix_key != "total") continue;
+
       SliceHistogram* Slice_Cov = SliceHistogram::make_slice_histogram( *true_signal, Slice, temp_cov_mat.get() );
       auto SliceCovMat_Ptr = Slice_Cov->cmat_.get_matrix();
       TMatrixD* SliceCovMat_Mat = SliceCovMat_Ptr.get();
 
-      SliceCovMat_Mat->Write(matrix_key.c_str());
+      SliceCovMat_Mat->Write(SliceVariableName.c_str());
     }
   }
   

@@ -1,0 +1,269 @@
+#include "FilePropertiesManager.hh"
+#include "HistUtils.hh"
+
+#include "TChain.h"
+#include "TFile.h"
+#include "TParameter.h"
+#include "TCanvas.h"
+#include "THStack.h"
+#include "TLegend.h"
+#include "TLatex.h"
+
+#include <vector>
+#include <iostream>
+#include <iomanip>
+
+struct Variable {
+  std::string BranchName_;
+  std::string Cut_;
+  TH1F Binning_;
+};
+
+int Plot() {
+
+  //================================================================================
+  //Define event weights, cuts and ntuple file types considered
+
+  std::vector<int> runs = {1,2,3};
+
+  const std::string mc_event_weight = DEFAULT_MC_EVENT_WEIGHT;
+
+  std::vector<NtupleFileType> FileTypes = {NtupleFileType::kOnBNB,NtupleFileType::kExtBNB,NtupleFileType::kNumuMC,NtupleFileType::kIntrinsicNueMC,NtupleFileType::kDirtMC};
+
+  //================================================================================
+  //Variables we want to plot:
+
+  std::vector<Variable> Variables;
+
+  Variables.emplace_back(Variable{"nslice","CC1mu2p0pi_Selected==1",TH1F("nslice","CC1mu2p0pi_Selected==1;nslice;events",4,-1,3)});
+  Variables.emplace_back(Variable{"topological_score","nslice==1",TH1F("topological_score","nslice==1;topological_score;events",30,0.,1.)});
+  Variables.emplace_back(Variable{"trk_score_v","nslice==1",TH1F("trk_score_v","nslice==1;trk_score_v;events",30,0.,1.)});
+  Variables.emplace_back(Variable{"trk_llr_pid_score_v","nslice==1",TH1F("trk_llr_pid_score_v","nslice==1;trk_llr_pid_score_v;events",30,-1.,1.)});
+  Variables.emplace_back(Variable{"trk_llr_pid_score_v","nslice==1 && CC1mu2p0pi_sel_npfps_eq_3==1",TH1F("trk_llr_pid_score_v_3PFPs","nslice==1 && CC1mu2p0pi_sel_npfps_eq_3==1;trk_llr_pid_score_v;events",30,-1.,1.)});
+  Variables.emplace_back(Variable{"reco_nu_vtx_sce_x","nslice==1",TH1F("reco_nu_vtx_sce_x","nslice==1;reco_nu_vtx_sce_x;events",50,-50.,300.)});
+  Variables.emplace_back(Variable{"reco_nu_vtx_sce_y","nslice==1",TH1F("reco_nu_vtx_sce_y","nslice==1;reco_nu_vtx_sce_y;events",50,-150.,150.)});
+  Variables.emplace_back(Variable{"reco_nu_vtx_sce_z","nslice==1",TH1F("reco_nu_vtx_sce_z","nslice==1;reco_nu_vtx_sce_z;events",50,-50.,1100.)});
+  Variables.emplace_back(Variable{"CC1mu2p0pi_MuonMomentumVector_Reco.Mag()","nslice==1",TH1F("CC1mu2p0piMuonMomentumVectorReco","nslice==1;CC1mu2p0piMuonMomentumVectorReco;events",60,0.05,2.0)});
+  Variables.emplace_back(Variable{"CC1mu2p0pi_LeadingProtonMomentumVector_Reco.Mag()","nslice==1",TH1F("CC1mu2p0piLeadingProtonMomentumVectorReco","nslice==1;CC1mu2p0piLeadingProtonMomentumVectorReco;events",60,0.05,2.0)});
+  Variables.emplace_back(Variable{"CC1mu2p0pi_RecoilProtonMomentumVector_Reco.Mag()","nslice==1",TH1F("CC1mu2p0piRecoilProtonMomentumVectorReco","nslice==1;CC1mu2p0piRecoilProtonMomentumVectorReco;events",60,0.05,1.2)});
+  Variables.emplace_back(Variable{"CC1mu2p0pi_MuonMomentumVector_Reco.Mag()","CC1mu2p0pi_Selected==1",TH1F("CC1mu2p0piMuonMomentumVectorReco_Sel","CC1mu2p0pi_Selected==1;CC1mu2p0piMuonMomentumVectorReco;events",60,0.05,2.0)});
+  Variables.emplace_back(Variable{"CC1mu2p0pi_LeadingProtonMomentumVector_Reco.Mag()","CC1mu2p0pi_Selected==1",TH1F("CC1mu2p0piLeadingProtonMomentumVectorReco_Sel","CC1mu2p0pi_Selected==1;CC1mu2p0piLeadingProtonMomentumVectorReco;events",60,0.05,2.0)});
+  Variables.emplace_back(Variable{"CC1mu2p0pi_RecoilProtonMomentumVector_Reco.Mag()","CC1mu2p0pi_Selected==1",TH1F("CC1mu2p0piRecoilProtonMomentumVectorReco_Sel","CC1mu2p0pi_Selected==1;CC1mu2p0piRecoilProtonMomentumVectorReco;events",60,0.05,1.2)});
+
+  //================================================================================
+  //Cateogries we want to plot by
+
+  std::vector<std::string> CategoryName;
+  std::vector<int> CategoryColor;
+  std::vector<std::string> CategoryCutString;
+
+  CategoryName.emplace_back("QE");
+  CategoryColor.emplace_back(46);
+  CategoryCutString.emplace_back("mc_interaction == 0");
+
+  CategoryName.emplace_back("MEC");
+  CategoryColor.emplace_back(38);
+  CategoryCutString.emplace_back("mc_interaction == 10");
+
+  CategoryName.emplace_back("RES");
+  CategoryColor.emplace_back(42);
+  CategoryCutString.emplace_back("mc_interaction == 1");
+
+  CategoryName.emplace_back("DIS");
+  CategoryColor.emplace_back(21);
+  CategoryCutString.emplace_back("mc_interaction == 2");
+
+  /*
+  CategoryName.emplace_back("All");
+  CategoryColor.emplace_back(46);
+  CategoryCutString.emplace_back("1");
+  */
+
+  //================================================================================
+
+  if (CategoryName.size() != CategoryCutString.size()) throw;
+
+  //HistogramsToFill[NTupleType][PlotVariable][Category]
+  std::vector< std::vector< std::vector<TH1F*> > > HistogramsToFill;
+  HistogramsToFill.resize(FileTypes.size());
+  for (size_t iFT=0;iFT<FileTypes.size();iFT++) {
+    HistogramsToFill[iFT].resize(Variables.size());
+    for (size_t iVar=0;iVar<Variables.size();iVar++) {
+      HistogramsToFill[iFT][iVar].resize(CategoryName.size());
+      for (int iCat=0;iCat<CategoryName.size();iCat++) {
+	HistogramsToFill[iFT][iVar][iCat] = (TH1F*)(Variables[iVar].Binning_).Clone();
+	HistogramsToFill[iFT][iVar][iCat]->Sumw2();
+      }
+    }
+  }
+
+  // Get access to the singleton utility class that manages the processed
+  // ntuple files
+  const FilePropertiesManager& fpm = FilePropertiesManager::Instance();
+  const auto& ntuple_map = fpm.ntuple_file_map();
+  std::map< std::string, FilePropertiesManager::TriggersAndPOT > data_norm_map = fpm.data_norm_map();
+
+  int histcounter = 0;
+
+  for ( int run : runs ) {
+    
+    std::string data_file_name = "";
+    for ( const auto& file_name : ntuple_map.at( run ).at( NtupleFileType::kOnBNB ) ) {
+      if (data_file_name != "") {
+	std::cerr << "Two data files found for run :" << run << std::endl;
+	throw;
+      }
+      data_file_name = file_name;
+    }
+    double DataNTrigs = (data_norm_map.at(data_file_name)).trigger_count_;
+    double DataPOT = (data_norm_map.at(data_file_name)).pot_;
+			
+    for (int iFT=0;iFT<FileTypes.size();iFT++) {
+      const auto& ntuple_files = ntuple_map.at( run ).at( FileTypes[iFT] );
+				       
+      for ( const auto& file_name : ntuple_files ) {
+        NtupleFileType NTupleType = fpm.get_ntuple_file_type(file_name);
+	double ScaleFactor = -1;
+
+	if (NTupleType == NtupleFileType::kOnBNB) {
+	  ScaleFactor = 1.;
+	}
+	if (NTupleType == NtupleFileType::kExtBNB) {
+	  FilePropertiesManager::TriggersAndPOT TrigPot = data_norm_map.at(file_name);
+	  ScaleFactor = (double)DataNTrigs/(double)TrigPot.trigger_count_;
+	}
+	if (NTupleType == NtupleFileType::kNumuMC || NTupleType == NtupleFileType::kIntrinsicNueMC || NTupleType == NtupleFileType::kDirtMC) {
+	  TFile temp_file( file_name.c_str(), "read" );
+	  TParameter<float>* temp_pot = nullptr;
+	  temp_file.GetObject( "summed_pot", temp_pot );
+	  double pot = temp_pot->GetVal();
+
+	  ScaleFactor = DataPOT/pot;
+	}
+
+	std::cout << "Adding: " << std::setw(140) << file_name << " (" << std::setw(15) << fpm.ntuple_type_to_string(NTupleType) << ")" << " | Factor: " << std::setw(10) << ScaleFactor << std::endl;
+	TChain Chain("stv_tree");
+	Chain.Add(file_name.c_str());
+
+	for (int iVar=0;iVar<Variables.size();iVar++) {
+
+	  TString CutString;
+	  if (NTupleType == NtupleFileType::kOnBNB) {
+	    CutString = "(" + Variables[iVar].Cut_ + ")";
+	  } else if (NTupleType == NtupleFileType::kExtBNB) {
+	    CutString = TString(Form("%2.6f * ",ScaleFactor)) + "(" + Variables[iVar].Cut_ + ")";
+	  } else {
+	    CutString = Form("%2.6f * ",ScaleFactor) + mc_event_weight + " * (" + Variables[iVar].Cut_ + ")";
+	  }
+
+	  for (int iCat=0;iCat<CategoryName.size();iCat++) {
+	    
+	    //TString HistName = Variables[iVar]+"_"+Form("%i",histcounter);
+	    TString HistName = Form("%i",histcounter);
+	    TH1F* Hist = (TH1F*)(Variables[iVar].Binning_).Clone(HistName);
+	    Hist->Sumw2();
+	    histcounter += 1;
+
+	    TString FullCutString;
+	    
+	    if (NTupleType == NtupleFileType::kOnBNB || NTupleType == NtupleFileType::kExtBNB) {
+	      FullCutString = CutString;
+	    } else {
+	      FullCutString = CutString + " * (" + CategoryCutString[iCat] + ")";
+	    }
+
+	    Chain.Draw((Variables[iVar].BranchName_+">>"+HistName),FullCutString,"goff");
+	    HistogramsToFill[iFT][iVar][iCat]->Add(Hist);	    
+	  }
+	}
+
+      }
+
+    }
+  }
+
+  std::cout << "============================================================" << std::endl;
+
+  for (size_t iFT=0;iFT<FileTypes.size();iFT++) {
+    for (size_t iVar=0;iVar<Variables.size();iVar++) {
+      for (size_t iCat=0;iCat<CategoryName.size();iCat++) {
+	std::cout << std::setw(15) << fpm.ntuple_type_to_string(FileTypes[iFT]) << " " << std::setw(65) << Variables[iVar].BranchName_ << " " << std::setw(15) << CategoryName[iCat] << " | " << std::setw(15) << HistogramsToFill[iFT][iVar][iCat]->Integral() << " " << std::setw(15) << HistogramsToFill[iFT][iVar][iCat]->GetEntries() << std::endl;
+      }
+    }
+  }
+
+  //========================================================================================================
+
+  //HistogramsToFill[NTupleType][PlotVariable][Category]
+  for (size_t iVar=0;iVar<Variables.size();iVar++) {
+
+    //First let's get the BNBon and EXT hists
+    //Don't integrate over categories because the cutstring is not differernt for each category 
+    TH1F* BNBOnHist = (TH1F*)(Variables[iVar].Binning_).Clone();
+    TH1F* ExtHist = (TH1F*)(Variables[iVar].Binning_).Clone();
+
+    for (size_t iFT=0;iFT<FileTypes.size();iFT++) {
+      if (FileTypes[iFT] == NtupleFileType::kOnBNB) {
+	BNBOnHist->Add(HistogramsToFill[iFT][iVar][0]);
+      }
+      if (FileTypes[iFT] == NtupleFileType::kExtBNB || FileTypes[iFT] == NtupleFileType::kDirtMC) {
+	ExtHist->Add(HistogramsToFill[iFT][iVar][0]);
+      }
+    }
+
+    TCanvas* Canv = new TCanvas(TString(Variables[iVar].Binning_.GetName())+"_Canv","");
+    THStack* Stack = new THStack((Variables[iVar].BranchName_+"_Stack").c_str(),(";"+Variables[iVar].BranchName_+";Events").c_str());
+    TLegend* Legend = new TLegend(0.1,0.9,0.9,1.0);
+    Legend->SetNColumns(std::ceil(float(CategoryName.size()+2)/2.0));
+
+    ExtHist->SetFillColor( 28 );
+    ExtHist->SetLineColor( 28 );
+    ExtHist->SetLineWidth( 2 );
+    ExtHist->SetFillStyle( 3005 );
+    Stack->Add(ExtHist);
+    Legend->AddEntry(ExtHist,"EXT","f");
+
+    std::vector<TH1F*> CatHists(CategoryName.size());
+
+    for (size_t iCat=0;iCat<CategoryName.size();iCat++) {
+      CatHists[iCat] = new TH1F(Variables[iVar].Binning_);
+      CatHists[iCat]->Sumw2();
+
+      for (size_t iFT=0;iFT<FileTypes.size();iFT++) {
+	if (FileTypes[iFT] == NtupleFileType::kOnBNB || FileTypes[iFT] == NtupleFileType::kExtBNB || FileTypes[iFT] == NtupleFileType::kDirtMC) continue;
+	CatHists[iCat]->Add(HistogramsToFill[iFT][iVar][iCat]);
+      }
+    }
+
+    for (size_t iCat=0;iCat<CategoryName.size();iCat++) {
+      CatHists[iCat]->SetFillColor(CategoryColor[iCat]);
+      Legend->AddEntry(CatHists[iCat],CategoryName[iCat].c_str(),"f");
+      Stack->Add(CatHists[iCat]);
+    }
+    
+    Stack->Draw("hist");
+    double Max = (Stack->GetMaximum() > BNBOnHist->GetMaximum()) ? Stack->GetMaximum() : BNBOnHist->GetMaximum();
+    Stack->SetMaximum(1.1*Max);
+
+    BNBOnHist->SetMarkerColor(kBlack);
+    BNBOnHist->SetLineColor(kBlack);
+    BNBOnHist->SetLineWidth( 3 );
+
+    BNBOnHist->Draw("SAME E");
+
+    Legend->AddEntry(BNBOnHist,"Data","l");
+    Legend->Draw("SAME");
+
+    TLatex Text(.13,.85,BNBOnHist->GetTitle());  
+    Text.SetNDC(kTRUE);
+    Text.Draw("SAME");
+
+    Canv->Update();
+    Canv->Print(TString(Variables[iVar].Binning_.GetName())+".pdf");
+  }
+
+}
+
+int main() {
+  Plot();
+}
