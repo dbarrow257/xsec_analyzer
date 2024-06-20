@@ -8,6 +8,8 @@
 #include "THStack.h"
 #include "TLegend.h"
 #include "TLatex.h"
+#include "TArrow.h"
+#include "TLine.h"
 
 #include <vector>
 #include <iostream>
@@ -15,8 +17,11 @@
 
 struct Variable {
   std::string BranchName_;
-  std::string Cut_;
+  std::string DrawCut_;
+  std::string ShortDrawCut_;
   TH1F Binning_;
+  double LowBoundSelCut_ = -999999.;
+  double UppBoundSelCut_ = 999999.;
 };
 
 int Plot() {
@@ -35,20 +40,20 @@ int Plot() {
 
   std::vector<Variable> Variables;
 
-  Variables.emplace_back(Variable{"nslice","CC1mu2p0pi_Selected==1",TH1F("nslice","CC1mu2p0pi_Selected==1;nslice;events",4,-1,3)});
-  Variables.emplace_back(Variable{"topological_score","nslice==1",TH1F("topological_score","nslice==1;topological_score;events",30,0.,1.)});
-  Variables.emplace_back(Variable{"trk_score_v","nslice==1",TH1F("trk_score_v","nslice==1;trk_score_v;events",30,0.,1.)});
-  Variables.emplace_back(Variable{"trk_llr_pid_score_v","nslice==1",TH1F("trk_llr_pid_score_v","nslice==1;trk_llr_pid_score_v;events",30,-1.,1.)});
-  Variables.emplace_back(Variable{"trk_llr_pid_score_v","nslice==1 && CC1mu2p0pi_sel_npfps_eq_3==1",TH1F("trk_llr_pid_score_v_3PFPs","nslice==1 && CC1mu2p0pi_sel_npfps_eq_3==1;trk_llr_pid_score_v;events",30,-1.,1.)});
-  Variables.emplace_back(Variable{"reco_nu_vtx_sce_x","nslice==1",TH1F("reco_nu_vtx_sce_x","nslice==1;reco_nu_vtx_sce_x;events",50,-50.,300.)});
-  Variables.emplace_back(Variable{"reco_nu_vtx_sce_y","nslice==1",TH1F("reco_nu_vtx_sce_y","nslice==1;reco_nu_vtx_sce_y;events",50,-150.,150.)});
-  Variables.emplace_back(Variable{"reco_nu_vtx_sce_z","nslice==1",TH1F("reco_nu_vtx_sce_z","nslice==1;reco_nu_vtx_sce_z;events",50,-50.,1100.)});
-  Variables.emplace_back(Variable{"CC1mu2p0pi_MuonMomentumVector_Reco.Mag()","nslice==1",TH1F("CC1mu2p0piMuonMomentumVectorReco","nslice==1;CC1mu2p0piMuonMomentumVectorReco;events",60,0.05,2.0)});
-  Variables.emplace_back(Variable{"CC1mu2p0pi_LeadingProtonMomentumVector_Reco.Mag()","nslice==1",TH1F("CC1mu2p0piLeadingProtonMomentumVectorReco","nslice==1;CC1mu2p0piLeadingProtonMomentumVectorReco;events",60,0.05,2.0)});
-  Variables.emplace_back(Variable{"CC1mu2p0pi_RecoilProtonMomentumVector_Reco.Mag()","nslice==1",TH1F("CC1mu2p0piRecoilProtonMomentumVectorReco","nslice==1;CC1mu2p0piRecoilProtonMomentumVectorReco;events",60,0.05,1.2)});
-  Variables.emplace_back(Variable{"CC1mu2p0pi_MuonMomentumVector_Reco.Mag()","CC1mu2p0pi_Selected==1",TH1F("CC1mu2p0piMuonMomentumVectorReco_Sel","CC1mu2p0pi_Selected==1;CC1mu2p0piMuonMomentumVectorReco;events",60,0.05,2.0)});
-  Variables.emplace_back(Variable{"CC1mu2p0pi_LeadingProtonMomentumVector_Reco.Mag()","CC1mu2p0pi_Selected==1",TH1F("CC1mu2p0piLeadingProtonMomentumVectorReco_Sel","CC1mu2p0pi_Selected==1;CC1mu2p0piLeadingProtonMomentumVectorReco;events",60,0.05,2.0)});
-  Variables.emplace_back(Variable{"CC1mu2p0pi_RecoilProtonMomentumVector_Reco.Mag()","CC1mu2p0pi_Selected==1",TH1F("CC1mu2p0piRecoilProtonMomentumVectorReco_Sel","CC1mu2p0pi_Selected==1;CC1mu2p0piRecoilProtonMomentumVectorReco;events",60,0.05,1.2)});
+  Variables.emplace_back(Variable{"nslice","1==1","All",TH1F("nslice","1==1;nslice;events",4,-1,3),1.,2.});
+
+  Variables.emplace_back(Variable{"reco_nu_vtx_sce_x","nslice==1","nslice==1",TH1F("reco_nu_vtx_sce_x",";reco_nu_vtx_sce_x;events",50,-50.,300.),10.,246.35});
+  Variables.emplace_back(Variable{"reco_nu_vtx_sce_y","nslice==1","nslice==1",TH1F("reco_nu_vtx_sce_y",";reco_nu_vtx_sce_y;events",50,-150.,150.),-106.5,106.5});
+  Variables.emplace_back(Variable{"reco_nu_vtx_sce_z","nslice==1","nslice==1",TH1F("reco_nu_vtx_sce_z",";reco_nu_vtx_sce_z;events",50,-50.,1100.),10.,1026.8});
+
+  Variables.emplace_back(Variable{"trk_score_v","nslice==1 && CC1mu2p0pi_sel_reco_vertex_in_FV==1","1 slice, in FV",TH1F("trk_score_v",";trk_score_v;events",30,0.,1.),0.8});
+  Variables.emplace_back(Variable{"trk_distance_v","nslice==1 && CC1mu2p0pi_sel_reco_vertex_in_FV==1","1 slice, in FV",TH1F("trk_distance_v",";trk_distance_v;events",30,0.,10.),-999999.,4.0});
+
+  Variables.emplace_back(Variable{"trk_llr_pid_score_v","nslice==1 && CC1mu2p0pi_sel_npfps_eq_3==1 && CC1mu2p0pi_sel_ntracks_eq_3==1","1 slice, in FV, 3 Tracks",TH1F("trk_llr_pid_score_v_3PFPs",";trk_llr_pid_score_v;events",30,-1.,1.),0.2,999999.});
+
+  Variables.emplace_back(Variable{"CC1mu2p0pi_MuonMomentumVector_Reco.Mag()","nslice==1 && CC1mu2p0pi_sel_reco_vertex_in_FV==1 && CC1mu2p0pi_sel_npfps_eq_3==1 && CC1mu2p0pi_sel_ntracks_eq_3==1 && CC1mu2p0pi_sel_correctparticles==1","1 slice, in FV, 2 protons, 1 muon",TH1F("CC1mu2p0piMuonMomentumVectorReco",";CC1mu2p0piMuonMomentumVectorReco.Mag();events",60,0.05,2.0),0.1,1.2});
+  Variables.emplace_back(Variable{"CC1mu2p0pi_LeadingProtonMomentumVector_Reco.Mag()","nslice==1 && CC1mu2p0pi_sel_reco_vertex_in_FV==1 && CC1mu2p0pi_sel_npfps_eq_3==1 && CC1mu2p0pi_sel_ntracks_eq_3==1 && CC1mu2p0pi_sel_correctparticles==1","1 slice, in FV, 2 protons, 1 muon",TH1F("CC1mu2p0piLeadingProtonMomentumVectorReco",";CC1mu2p0piLeadingProtonMomentumVectorReco.Mag();events",60,0.05,2.0),0.3,1.0});
+  Variables.emplace_back(Variable{"CC1mu2p0pi_RecoilProtonMomentumVector_Reco.Mag()","nslice==1 && CC1mu2p0pi_sel_reco_vertex_in_FV==1 && CC1mu2p0pi_sel_npfps_eq_3==1 && CC1mu2p0pi_sel_ntracks_eq_3==1 && CC1mu2p0pi_sel_correctparticles==1","1 slice, in FV, 2 protons, 1 muon",TH1F("CC1mu2p0piRecoilProtonMomentumVectorReco",";CC1mu2p0piRecoilProtonMomentumVectorReco.Mag();events",60,0.05,2.0),0.3,1.0});
 
   //================================================================================
   //Cateogries we want to plot by
@@ -56,6 +61,82 @@ int Plot() {
   std::vector<std::string> CategoryName;
   std::vector<int> CategoryColor;
   std::vector<std::string> CategoryCutString;
+
+  /*
+  CategoryName.emplace_back("Proton");
+  CategoryColor.emplace_back(46);
+  CategoryCutString.emplace_back("backtracked_pdg==2212");
+
+  CategoryName.emplace_back("Muon");
+  CategoryColor.emplace_back(kCyan+2);
+  CategoryCutString.emplace_back("TMath::Abs(backtracked_pdg)==13");
+
+  CategoryName.emplace_back("Pion");
+  CategoryColor.emplace_back(38);
+  CategoryCutString.emplace_back("TMath::Abs(backtracked_pdg)==211");
+
+  CategoryName.emplace_back("#gamma");
+  CategoryColor.emplace_back(24);
+  CategoryCutString.emplace_back("backtracked_pdg==22");
+
+  CategoryName.emplace_back("Electron");
+  CategoryColor.emplace_back(28);
+  CategoryCutString.emplace_back("TMath::Abs(backtracked_pdg)==11");
+
+  CategoryName.emplace_back("Kaon");
+  CategoryColor.emplace_back(42);
+  CategoryCutString.emplace_back("TMath::Abs(backtracked_pdg)==321");
+
+  CategoryName.emplace_back("Other");
+  CategoryColor.emplace_back(kGray);
+  CategoryCutString.emplace_back("(backtracked_pdg==2112 || backtracked_pdg==0)");
+  */
+
+  /*
+  CategoryName.emplace_back("Other");
+  CategoryColor.emplace_back(kBlack);
+  CategoryCutString.emplace_back("(CC1mu2p0pi_EventCategory==0 || CC1mu2p0pi_EventCategory==19 || CC1mu2p0pi_EventCategory==20 || CC1mu2p0pi_EventCategory==22)");
+
+  CategoryName.emplace_back("OOFV");
+  CategoryColor.emplace_back(kGray);
+  CategoryCutString.emplace_back("CC1mu2p0pi_EventCategory==21");
+
+  CategoryName.emplace_back("CC1#mu CCOth");
+  CategoryColor.emplace_back(46);
+  CategoryCutString.emplace_back("CC1mu2p0pi_EventCategory==18");
+
+  CategoryName.emplace_back("CC1#muN#pi");
+  CategoryColor.emplace_back(42);
+  CategoryCutString.emplace_back("CC1mu2p0pi_EventCategory==17");
+
+  CategoryName.emplace_back("CC1#mu0p");
+  CategoryColor.emplace_back(21);
+  CategoryCutString.emplace_back("(CC1mu2p0pi_EventCategory==1 || CC1mu2p0pi_EventCategory==2 || CC1mu2p0pi_EventCategory==3 || CC1mu2p0pi_EventCategory==4)");
+
+  CategoryName.emplace_back("CC1#mu1p");
+  CategoryColor.emplace_back(24);
+  CategoryCutString.emplace_back("(CC1mu2p0pi_EventCategory==5 || CC1mu2p0pi_EventCategory==6 || CC1mu2p0pi_EventCategory==7 || CC1mu2p0pi_EventCategory==8)");
+
+  CategoryName.emplace_back("CC1#mu(M>2)p");
+  CategoryColor.emplace_back(28);
+  CategoryCutString.emplace_back("(CC1mu2p0pi_EventCategory==13 || CC1mu2p0pi_EventCategory==14 || CC1mu2p0pi_EventCategory==15 || CC1mu2p0pi_EventCategory==16)");
+
+  CategoryName.emplace_back("CC1#mu2p Other");
+  CategoryColor.emplace_back(9);
+  CategoryCutString.emplace_back("CC1mu2p0pi_EventCategory==12");
+
+  CategoryName.emplace_back("CC1#mu2p QE");
+  CategoryColor.emplace_back(38);
+  CategoryCutString.emplace_back("CC1mu2p0pi_EventCategory==9");
+
+  CategoryName.emplace_back("CC1#mu2p RES");
+  CategoryColor.emplace_back(kCyan-3);
+  CategoryCutString.emplace_back("CC1mu2p0pi_EventCategory==11");
+
+  CategoryName.emplace_back("CC1#mu2p MEC");
+  CategoryColor.emplace_back(kCyan+2);  
+  CategoryCutString.emplace_back("CC1mu2p0pi_EventCategory==10");
+  */
 
   CategoryName.emplace_back("QE");
   CategoryColor.emplace_back(46);
@@ -149,11 +230,11 @@ int Plot() {
 
 	  TString CutString;
 	  if (NTupleType == NtupleFileType::kOnBNB) {
-	    CutString = "(" + Variables[iVar].Cut_ + ")";
+	    CutString = "(" + Variables[iVar].DrawCut_ + ")";
 	  } else if (NTupleType == NtupleFileType::kExtBNB) {
-	    CutString = TString(Form("%2.6f * ",ScaleFactor)) + "(" + Variables[iVar].Cut_ + ")";
+	    CutString = TString(Form("%2.6f * ",ScaleFactor)) + "(" + Variables[iVar].DrawCut_ + ")";
 	  } else {
-	    CutString = Form("%2.6f * ",ScaleFactor) + mc_event_weight + " * (" + Variables[iVar].Cut_ + ")";
+	    CutString = Form("%2.6f * ",ScaleFactor) + mc_event_weight + " * (" + Variables[iVar].DrawCut_ + ")";
 	  }
 
 	  for (int iCat=0;iCat<CategoryName.size();iCat++) {
@@ -243,7 +324,8 @@ int Plot() {
     
     Stack->Draw("hist");
     double Max = (Stack->GetMaximum() > BNBOnHist->GetMaximum()) ? Stack->GetMaximum() : BNBOnHist->GetMaximum();
-    Stack->SetMaximum(1.1*Max);
+    double Min = Stack->GetMinimum();
+    Stack->SetMaximum(1.3*Max);
 
     BNBOnHist->SetMarkerColor(kBlack);
     BNBOnHist->SetLineColor(kBlack);
@@ -254,9 +336,31 @@ int Plot() {
     Legend->AddEntry(BNBOnHist,"Data","l");
     Legend->Draw("SAME");
 
-    TLatex Text(.13,.85,BNBOnHist->GetTitle());  
+    TLatex Text(.13,.85,Variables[iVar].ShortDrawCut_.c_str());
     Text.SetNDC(kTRUE);
     Text.Draw("SAME");
+
+    if (Variables[iVar].LowBoundSelCut_ != -999999. || Variables[iVar].UppBoundSelCut_ != 999999.) {
+
+      double LowVal = (Variables[iVar].LowBoundSelCut_ < BNBOnHist->GetXaxis()->GetBinLowEdge(1)) ? BNBOnHist->GetXaxis()->GetBinLowEdge(1) : Variables[iVar].LowBoundSelCut_;
+      double UppVal = (Variables[iVar].UppBoundSelCut_ > BNBOnHist->GetXaxis()->GetBinLowEdge(BNBOnHist->GetNbinsX()+1)) ? BNBOnHist->GetXaxis()->GetBinLowEdge(BNBOnHist->GetNbinsX()+1) : Variables[iVar].UppBoundSelCut_;
+
+      if (Variables[iVar].LowBoundSelCut_ > BNBOnHist->GetXaxis()->GetBinLowEdge(1)) {
+	TLine* LowLine = new TLine(LowVal,Min,LowVal,1.1*Max);
+	LowLine->Draw();
+	
+	TArrow* LowArr = new TArrow(LowVal,1.1*Max,LowVal+0.3*(UppVal-LowVal),1.1*Max,0.03,"|>");
+	LowArr->Draw();
+      }
+
+      if (Variables[iVar].UppBoundSelCut_ < BNBOnHist->GetXaxis()->GetBinLowEdge(BNBOnHist->GetNbinsX()+1)) {
+	TLine* UppLine = new TLine(UppVal,Min,UppVal,1.1*Max);
+	UppLine->Draw();
+	
+	TArrow* UppArr = new TArrow(UppVal,1.1*Max,UppVal-0.3*(UppVal-LowVal),1.1*Max,0.03,"|>");
+	UppArr->Draw();
+      }
+    }
 
     Canv->Update();
     Canv->Print(TString(Variables[iVar].Binning_.GetName())+".pdf");

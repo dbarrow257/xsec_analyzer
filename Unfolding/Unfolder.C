@@ -393,6 +393,10 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 	  
 	  auto SliceCovMat_Ptr = Slice_unf->cmat_.get_matrix();
 	  TMatrixD* SliceCovMat_Mat = SliceCovMat_Ptr.get();
+
+          SliceHistogram* Slice_AC = SliceHistogram::make_slice_histogram( *xsec.result_.unfolded_signal_, Slice, &AC_matrix );
+	  auto SliceAC_Ptr = Slice_AC->cmat_.get_matrix();
+          TMatrixD* SliceAC_Mat = SliceAC_Ptr.get();
 	  
 	  //====================================================================================== 
 	  //Get the MC Predictions 
@@ -460,9 +464,10 @@ void Unfolder(std::string XSEC_Config, std::string SLICE_Config, std::string Out
 	  //Write to File
 	  
 	  SliceCovMat_Mat->Write("UncerCovMat");
+	  SliceAC_Mat->Write("ACMat");
 	  Slice_unf_hist->Write("UnfoldedData");
 	  genie_cv_truth_smeared_slice->Write("CVPred_Smeared");
-	  
+
 	  if ( using_fake_data ) {
 	    FDS_slice->Write("FakeDataPred_Smeared");
 	  }
