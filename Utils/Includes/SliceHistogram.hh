@@ -376,6 +376,11 @@ SliceHistogram::Chi2Result SliceHistogram::get_chi2(
 
   // Invert the covariance matrix
   auto inverse_cov_matrix = invert_matrix( *cov_matrix, inversion_tol );
+  if (inverse_cov_matrix == nullptr) {
+    std::cout << "Inversion failed!" << std::endl;
+    Chi2Result result( 0,0,0,0 );
+    return result;
+  }
 
   // Create a 1D vector containing the difference between the two slice
   // histograms in each bin

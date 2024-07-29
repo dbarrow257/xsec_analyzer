@@ -123,4 +123,10 @@ int main() {
     std::cout << std::setw(3) << mode.first << " " << std::setw(30) << mode.second << " = " << std::setw(10) << Entries << Form(" (%2.2f)",100.*Entries/TotalNuMuOverlaySignalEntries) << std::endl;
   }
 
+  std::cout << "\n=============================================" << std::endl;
+  std::cout << "Total Number of Signal Events:" << std::endl;
+
+  double TotalSignalEntries = TotalNuMuOverlaySample->GetEntries("CC1mu2p0pi_MC_Signal==1");
+  std::cout << std::setw(3) << "-1" << " " << std::setw(30) << "Total" << " = " << std::setw(10) << TotalSignalEntries << std::endl;
+
 }

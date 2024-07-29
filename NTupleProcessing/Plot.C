@@ -30,22 +30,27 @@ int Plot() {
   //Define event weights, cuts and ntuple file types considered
 
   std::vector<int> runs = {1,2,3};
-
+  //std::vector<int> runs = {1};
+  
   const std::string mc_event_weight = DEFAULT_MC_EVENT_WEIGHT;
 
   std::vector<NtupleFileType> FileTypes = {NtupleFileType::kOnBNB,NtupleFileType::kExtBNB,NtupleFileType::kNumuMC,NtupleFileType::kIntrinsicNueMC,NtupleFileType::kDirtMC};
+  //std::vector<NtupleFileType> FileTypes = {NtupleFileType::kOnBNB,NtupleFileType::kNumuMC};
 
   //================================================================================
   //Variables we want to plot:
 
   std::vector<Variable> Variables;
 
+  /*
   Variables.emplace_back(Variable{"nslice","1==1","All",TH1F("nslice","1==1;nslice;events",4,-1,3),1.,2.});
+  */
 
-  Variables.emplace_back(Variable{"reco_nu_vtx_sce_x","nslice==1","nslice==1",TH1F("reco_nu_vtx_sce_x",";reco_nu_vtx_sce_x;events",50,-50.,300.),10.,246.35});
-  Variables.emplace_back(Variable{"reco_nu_vtx_sce_y","nslice==1","nslice==1",TH1F("reco_nu_vtx_sce_y",";reco_nu_vtx_sce_y;events",50,-150.,150.),-106.5,106.5});
-  Variables.emplace_back(Variable{"reco_nu_vtx_sce_z","nslice==1","nslice==1",TH1F("reco_nu_vtx_sce_z",";reco_nu_vtx_sce_z;events",50,-50.,1100.),10.,1026.8});
+  Variables.emplace_back(Variable{"mc_nu_vtx_sce_x","nslice==1","nslice==1",TH1F("mc_nu_vtx_sce_x",";mc_nu_vtx_sce_x;events",50,-50.,300.),10.,246.35});
+  Variables.emplace_back(Variable{"mc_nu_vtx_sce_y","nslice==1","nslice==1",TH1F("mc_nu_vtx_sce_y",";mc_nu_vtx_sce_y;events",50,-150.,150.),-106.5,106.5});
+  Variables.emplace_back(Variable{"mc_nu_vtx_sce_z","nslice==1","nslice==1",TH1F("mc_nu_vtx_sce_z",";mc_nu_vtx_sce_z;events",50,-50.,1100.),10.,1026.8});
 
+  /*
   Variables.emplace_back(Variable{"trk_score_v","nslice==1 && CC1mu2p0pi_sel_reco_vertex_in_FV==1","1 slice, in FV",TH1F("trk_score_v",";trk_score_v;events",30,0.,1.),0.8});
   Variables.emplace_back(Variable{"trk_distance_v","nslice==1 && CC1mu2p0pi_sel_reco_vertex_in_FV==1","1 slice, in FV",TH1F("trk_distance_v",";trk_distance_v;events",30,0.,10.),-999999.,4.0});
 
@@ -54,6 +59,24 @@ int Plot() {
   Variables.emplace_back(Variable{"CC1mu2p0pi_MuonMomentumVector_Reco.Mag()","nslice==1 && CC1mu2p0pi_sel_reco_vertex_in_FV==1 && CC1mu2p0pi_sel_npfps_eq_3==1 && CC1mu2p0pi_sel_ntracks_eq_3==1 && CC1mu2p0pi_sel_correctparticles==1","1 slice, in FV, 2 protons, 1 muon",TH1F("CC1mu2p0piMuonMomentumVectorReco",";CC1mu2p0piMuonMomentumVectorReco.Mag();events",60,0.05,2.0),0.1,1.2});
   Variables.emplace_back(Variable{"CC1mu2p0pi_LeadingProtonMomentumVector_Reco.Mag()","nslice==1 && CC1mu2p0pi_sel_reco_vertex_in_FV==1 && CC1mu2p0pi_sel_npfps_eq_3==1 && CC1mu2p0pi_sel_ntracks_eq_3==1 && CC1mu2p0pi_sel_correctparticles==1","1 slice, in FV, 2 protons, 1 muon",TH1F("CC1mu2p0piLeadingProtonMomentumVectorReco",";CC1mu2p0piLeadingProtonMomentumVectorReco.Mag();events",60,0.05,2.0),0.3,1.0});
   Variables.emplace_back(Variable{"CC1mu2p0pi_RecoilProtonMomentumVector_Reco.Mag()","nslice==1 && CC1mu2p0pi_sel_reco_vertex_in_FV==1 && CC1mu2p0pi_sel_npfps_eq_3==1 && CC1mu2p0pi_sel_ntracks_eq_3==1 && CC1mu2p0pi_sel_correctparticles==1","1 slice, in FV, 2 protons, 1 muon",TH1F("CC1mu2p0piRecoilProtonMomentumVectorReco",";CC1mu2p0piRecoilProtonMomentumVectorReco.Mag();events",60,0.05,2.0),0.3,1.0});
+
+  Variables.emplace_back(Variable{"CC1mu2p0pi_Reco_Q2","CC1mu2p0pi_Selected==1","CC1mu2p0pi_Selected==1",TH1F("CC1mu2p0piRecoQ2",";RecoQ2;events;",20,0.,2.)});
+  Variables.emplace_back(Variable{"CC1mu2p0pi_True_Q2","CC1mu2p0pi_Selected==1","CC1mu2p0pi_Selected==1",TH1F("CC1mu2p0piTrueQ2",";TrueQ2;events;",20,0.,2.)});
+  */
+  
+  /*
+  std::vector<double> BinEdges = {0.,0.1,0.2,0.3,0.4,0.5,0.6,1.0};
+  Variables.emplace_back(Variable{"CC1mu2p0pi_True_Pt","CC1mu2p0pi_MC_Signal==1","CC1mu2p0pi_MC_Signal==1",TH1F("CC1mu2p0pi_True_Pt",";CC1mu2p0pi_True_Pt;events",BinEdges.size()-1,BinEdges.data())});
+  Variables.emplace_back(Variable{"CC1mu2p0pi_Reco_Pt","CC1mu2p0pi_Selected==1","CC1mu2p0pi_Selected==1",TH1F("CC1mu2p0pi_Reco_Pt",";CC1mu2p0pi_Reco_Pt;events",BinEdges.size()-1,BinEdges.data())});
+
+  Variables.emplace_back(Variable{"CC1mu2p0pi_True_Pt","CC1mu2p0pi_MC_Signal==1 && CC1mu2p0pi_Selected==1","CC1mu2p0pi_MC_Signal==1 && CC1mu2p0pi_Selected==1",TH1F("CC1mu2p0pi_True_Pt_SigSel",";CC1mu2p0pi_True_Pt;events",BinEdges.size()-1,BinEdges.data())});
+  Variables.emplace_back(Variable{"CC1mu2p0pi_Reco_Pt","CC1mu2p0pi_MC_Signal==1 && CC1mu2p0pi_Selected==1","CC1mu2p0pi_MC_Signal==1 && CC1mu2p0pi_Selected==1",TH1F("CC1mu2p0pi_Reco_Pt_SigSel",";CC1mu2p0pi_Reco_Pt;events",BinEdges.size()-1,BinEdges.data())});
+  */
+
+  /*
+  std::vector<double> BinEdges = {-1.0,-0.75,-0.50,-0.25,0.,0.25,0.50,0.75,1.0};
+  Variables.emplace_back(Variable{"CC1mu2p0pi_Reco_CosPlPr","CC1mu2p0pi_Selected==1","CC1mu2p0pi_Selected==1",TH1F("CC1mu2p0pi_Reco_CosPlPr",";cos(#theta_{#vec{P_{L}} #bullet #vec{P_{R}}});events",BinEdges.size()-1,BinEdges.data())});
+  */
 
   //================================================================================
   //Cateogries we want to plot by
@@ -92,7 +115,6 @@ int Plot() {
   CategoryCutString.emplace_back("(backtracked_pdg==2112 || backtracked_pdg==0)");
   */
 
-  /*
   CategoryName.emplace_back("Other");
   CategoryColor.emplace_back(kBlack);
   CategoryCutString.emplace_back("(CC1mu2p0pi_EventCategory==0 || CC1mu2p0pi_EventCategory==19 || CC1mu2p0pi_EventCategory==20 || CC1mu2p0pi_EventCategory==22)");
@@ -136,23 +158,32 @@ int Plot() {
   CategoryName.emplace_back("CC1#mu2p MEC");
   CategoryColor.emplace_back(kCyan+2);  
   CategoryCutString.emplace_back("CC1mu2p0pi_EventCategory==10");
-  */
 
-  CategoryName.emplace_back("QE");
+  /*
+  CategoryName.emplace_back("CCQE");
   CategoryColor.emplace_back(46);
-  CategoryCutString.emplace_back("mc_interaction == 0");
+  CategoryCutString.emplace_back("abs(mc_nu_pdg) == 14 && mc_ccnc == 0 && mc_interaction == 0");
 
-  CategoryName.emplace_back("MEC");
-  CategoryColor.emplace_back(38);
-  CategoryCutString.emplace_back("mc_interaction == 10");
+  CategoryName.emplace_back("CCMEC");
+  CategoryColor.emplace_back(kCyan+2);
+  CategoryCutString.emplace_back("abs(mc_nu_pdg) == 14 && mc_ccnc == 0 && mc_interaction == 10");
 
-  CategoryName.emplace_back("RES");
+  CategoryName.emplace_back("CCRES");
   CategoryColor.emplace_back(42);
-  CategoryCutString.emplace_back("mc_interaction == 1");
+  CategoryCutString.emplace_back("abs(mc_nu_pdg) == 14 && mc_ccnc == 0 && mc_interaction == 1");
 
-  CategoryName.emplace_back("DIS");
+  CategoryName.emplace_back("CCDIS");
   CategoryColor.emplace_back(21);
-  CategoryCutString.emplace_back("mc_interaction == 2");
+  CategoryCutString.emplace_back("abs(mc_nu_pdg) == 14 && mc_ccnc == 0 && mc_interaction == 2");
+
+  CategoryName.emplace_back("#nu_{e}");
+  CategoryColor.emplace_back(kOrange);
+  CategoryCutString.emplace_back("abs(mc_nu_pdg) == 12 && mc_ccnc == 0");
+
+  CategoryName.emplace_back("NC");
+  CategoryColor.emplace_back(kGray);
+  CategoryCutString.emplace_back("mc_ccnc == 1");
+  */
 
   /*
   CategoryName.emplace_back("All");
@@ -231,6 +262,7 @@ int Plot() {
 	  TString CutString;
 	  if (NTupleType == NtupleFileType::kOnBNB) {
 	    CutString = "(" + Variables[iVar].DrawCut_ + ")";
+	    //CutString = mc_event_weight + " * (" + Variables[iVar].DrawCut_ + ") * FDSWeight";
 	  } else if (NTupleType == NtupleFileType::kExtBNB) {
 	    CutString = TString(Form("%2.6f * ",ScaleFactor)) + "(" + Variables[iVar].DrawCut_ + ")";
 	  } else {
@@ -247,7 +279,7 @@ int Plot() {
 
 	    TString FullCutString;
 	    
-	    if (NTupleType == NtupleFileType::kOnBNB || NTupleType == NtupleFileType::kExtBNB) {
+	    if (NTupleType == NtupleFileType::kOnBNB || NTupleType == NtupleFileType::kExtBNB || NTupleType == NtupleFileType::kDirtMC) {
 	      FullCutString = CutString;
 	    } else {
 	      FullCutString = CutString + " * (" + CategoryCutString[iCat] + ")";
@@ -277,6 +309,7 @@ int Plot() {
 
   //HistogramsToFill[NTupleType][PlotVariable][Category]
   for (size_t iVar=0;iVar<Variables.size();iVar++) {
+    std::cout << std::setw(15) << Variables[iVar].BranchName_ << std::endl;
 
     //First let's get the BNBon and EXT hists
     //Don't integrate over categories because the cutstring is not differernt for each category 
@@ -292,8 +325,20 @@ int Plot() {
       }
     }
 
+    std::cout << std::setw(15) << "Data" << ": ";
+    for (int xBin=1;xBin<=BNBOnHist->GetNbinsX();xBin++) {
+      std::cout << std::setw(15) << BNBOnHist->GetBinContent(xBin) << ", ";
+    }
+    std::cout << ", " << BNBOnHist->Integral() << std::endl;
+
+    std::cout << std::setw(15) << "Ext" << ": ";
+    for (int xBin=1;xBin<=ExtHist->GetNbinsX();xBin++) {
+      std::cout << std::setw(15) << ExtHist->GetBinContent(xBin) << ", ";
+    }
+    std::cout << ", " << ExtHist->Integral() << std::endl;
+
     TCanvas* Canv = new TCanvas(TString(Variables[iVar].Binning_.GetName())+"_Canv","");
-    THStack* Stack = new THStack((Variables[iVar].BranchName_+"_Stack").c_str(),(";"+Variables[iVar].BranchName_+";Events").c_str());
+    THStack* Stack = new THStack((Variables[iVar].BranchName_+"_Stack").c_str(),(";"+std::string(Variables[iVar].Binning_.GetXaxis()->GetTitle())+";Events").c_str());
     TLegend* Legend = new TLegend(0.1,0.9,0.9,1.0);
     Legend->SetNColumns(std::ceil(float(CategoryName.size()+2)/2.0));
 
@@ -320,7 +365,20 @@ int Plot() {
       CatHists[iCat]->SetFillColor(CategoryColor[iCat]);
       Legend->AddEntry(CatHists[iCat],CategoryName[iCat].c_str(),"f");
       Stack->Add(CatHists[iCat]);
+
+      std::cout << std::setw(15) << CategoryName[iCat] << ": ";
+      for (int xBin=1;xBin<=CatHists[iCat]->GetNbinsX();xBin++) {
+	std::cout << std::setw(15) << CatHists[iCat]->GetBinContent(xBin) << ", ";
+      }
+      std::cout << ", " << CatHists[iCat]->Integral() << std::endl;
     }
+
+    std::cout << std::setw(15) << "Total" << ": ";
+    TH1 *StackTotal = (TH1*)Stack->GetStack()->Last();
+    for (int xBin=1;xBin<=StackTotal->GetNbinsX();xBin++) {
+      std::cout << std::setw(15) << StackTotal->GetBinContent(xBin) << ", ";
+    }
+    std::cout << ", " << StackTotal->Integral() << std::endl;
     
     Stack->Draw("hist");
     double Max = (Stack->GetMaximum() > BNBOnHist->GetMaximum()) ? Stack->GetMaximum() : BNBOnHist->GetMaximum();
@@ -338,7 +396,7 @@ int Plot() {
 
     TLatex Text(.13,.85,Variables[iVar].ShortDrawCut_.c_str());
     Text.SetNDC(kTRUE);
-    Text.Draw("SAME");
+    //Text.Draw("SAME");
 
     if (Variables[iVar].LowBoundSelCut_ != -999999. || Variables[iVar].UppBoundSelCut_ != 999999.) {
 

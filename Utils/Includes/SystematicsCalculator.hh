@@ -760,8 +760,10 @@ void SystematicsCalculator::build_universes( TDirectoryFile& root_tdir ) {
         // scaling to the beam-on triggers in the case of EXT data
         if ( !is_mc ) {
 
-          auto reco_hist = get_object_unique_ptr< TH1D >(
-            "unweighted_0_reco", *subdir );
+	  // when using fake data, get weighted CV histograms if present
+          auto tmp_reco_hist = type == NFT::kOnBNB ? get_object_unique_ptr<TH1D>((CV_UNIV_NAME + "_0_reco").c_str(), *subdir) : nullptr;
+          const auto dataContainsWeightedCV = tmp_reco_hist.get() != nullptr;
+	  auto reco_hist = dataContainsWeightedCV ? std::move(tmp_reco_hist) : get_object_unique_ptr<TH1D>("unweighted_0_reco", *subdir);
 
           auto reco_hist2d = get_object_unique_ptr< TH2D >(
             "unweighted_0_reco2d", *subdir );
@@ -884,7 +886,13 @@ void SystematicsCalculator::build_universes( TDirectoryFile& root_tdir ) {
           // TODO: add the capability for fake data to use event weights
           // (both in the saved fake data Universe object and in the
           // corresponding "data" histogram of reco event counts
-          std::string hist_name_prefix = "unweighted_0";
+
+          // Retrieve the histograms for the fake data universe (which
+          // corresponds to the "unweighted" histogram name prefix) from
+          // the current TDirectoryFile.
+          const auto tmp_reco_hist = get_object_unique_ptr<TH1D>((CV_UNIV_NAME + "_0_reco").c_str(), *subdir);
+          const auto dataContainsWeightedCV = tmp_reco_hist.get() != nullptr;
+	  std::string hist_name_prefix = (dataContainsWeightedCV ? CV_UNIV_NAME : "unweighted" ) + "_0";
 
           auto h_reco = get_object_unique_ptr< TH1D >(
             (hist_name_prefix + "_reco"), *subdir );
@@ -1667,7 +1675,15 @@ std::unique_ptr< TMatrixD >
 {
   int num_true_bins = true_bins_.size();
   const auto& cv_univ = this->cv_universe();
+
+  //std::cout << "\n" << std::endl;
   const TH1D* ext_hist = data_hists_.at( NFT::kExtBNB ).get(); // EXT data
+  /*
+  for (int iBin=1;iBin<=ext_hist->GetNbinsX();iBin++) {
+    std::cout << "ext_hist->GetBinContent(" << iBin << ") = " << ext_hist->GetBinContent(iBin) << std::endl;
+  }
+  std::cout << "\n" << std::endl;
+  */
 
   auto result = std::make_unique< TMatrixD >( num_ordinary_reco_bins_, 1 );
 
@@ -1724,6 +1740,9 @@ MeasuredEvents SystematicsCalculator::get_measured_events() const
   // Also get the central-value signal prediction for all ordinary reco bins
   auto mc_signal = this->get_cv_ordinary_reco_signal();
 
+  //std::cout << "mc_signal:" << std::endl;
+  //mc_signal->Print();
+
   // Get the total covariance matrix on the reco-space EXT+MC prediction
   // (this will not change after subtraction of the central-value background)
   auto cov_map_ptr = this->get_covariances();
@@ -1736,8 +1755,14 @@ MeasuredEvents SystematicsCalculator::get_measured_events() const
       0, num_ordinary_reco_bins_ - 1 )
   );
 
+  //std::cout << "\n" << std::endl;
   // Create the vector of measured event counts in the ordinary reco bins
   const TH1D* d_hist = data_hists_.at( NFT::kOnBNB ).get(); // BNB data
+  //for (int iBin=1;iBin<=d_hist->GetNbinsX();iBin++) {
+  //std::cout << "d_hist->GetBinContent(" << iBin << ") = " << d_hist->GetBinContent(iBin) << std::endl;
+  //}
+  //std::cout << "\n" << std::endl;
+
   TMatrixD ordinary_data( num_ordinary_reco_bins_, 1 );
   for ( int r = 0; r < num_ordinary_reco_bins_; ++r ) {
     // Switch to using the one-based TH1D index when retrieving these values
@@ -1754,6 +1779,17 @@ MeasuredEvents SystematicsCalculator::get_measured_events() const
   // Also get the total central-value EXT+MC prediction in each reco bin
   auto* ext_plus_mc_total = new TMatrixD( *mc_signal,
     TMatrixD::EMatrixCreatorsOp2::kPlus, *ext_plus_mc_bkgd );
+
+  /*
+  std::cout << "ordinary_data:" << std::endl;
+  ordinary_data.Print();
+
+  std::cout << "ext_plus_mc_bkgd:" << std::endl;
+  ext_plus_mc_bkgd->Print();
+
+  std::cout << "reco_data_minus_bkgd:" << std::endl;
+  reco_data_minus_bkgd->Print();
+  */
 
   MeasuredEvents result( reco_data_minus_bkgd, ext_plus_mc_bkgd,
     ext_plus_mc_total, cov_mat );

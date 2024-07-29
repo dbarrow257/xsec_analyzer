@@ -55,6 +55,7 @@ std::string ntuple_subfolder_from_file_name( const std::string& file_name ) {
 // Branch names for special event weights
 const std::string SPLINE_WEIGHT_NAME = "weight_splines_general_Spline";
 const std::string TUNE_WEIGHT_NAME = "weight_TunedCentralValue_UBGenie";
+const std::string FDS_WEIGHT_NAME = "FDSWeight";
 
 // Special weight name to store the unweighted event counts
 const std::string UNWEIGHTED_NAME = "unweighted";
@@ -594,6 +595,12 @@ void UniverseMaker::build_universes(
   bool is_mc;
   input_chain_.SetBranchAddress( "is_mc", &is_mc );
 
+  double FDSWeight = 1.;
+  TBranch* br = (TBranch*)(input_chain_.GetListOfBranches()->FindObject( FDS_WEIGHT_NAME.c_str() ));
+  if ( br ) {
+    input_chain_.SetBranchAddress(FDS_WEIGHT_NAME.c_str(),&FDSWeight);
+  }
+
   // Get the first TChain entry so that we can know the number of universes
   // used in each vector of weights
   input_chain_.GetEntry( 0 );
@@ -684,6 +691,9 @@ void UniverseMaker::build_universes(
 
         // Deal with NaNs, etc. to make a "safe weight" in all cases
         double safe_wgt = safe_weight( w );
+
+	// Multiply by the FDS Weight
+	//safe_wgt *= FDSWeight;
 
         // Get the universe object that should be filled with the processed
         // event weight
